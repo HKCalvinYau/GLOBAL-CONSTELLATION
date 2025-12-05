@@ -9,7 +9,7 @@ import react from '@astrojs/react';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://your-domain.pages.dev', // 請替換為您的 Cloudflare Pages 域名
+  site: 'https://global-constellation.pages.dev', // Cloudflare Pages 域名
   integrations: [
     tailwind({
       // 啟用 Tailwind CSS
