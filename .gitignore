@@ -27,3 +27,9 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Sensitive files
+gittoken.md
+*.token
+*.key
+*.secret
+
