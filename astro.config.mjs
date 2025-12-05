@@ -20,7 +20,13 @@ export default defineConfig({
   adapter: cloudflare(), // Cloudflare Pages 適配器
   vite: {
     ssr: {
-      noExternal: ['@keystatic/core']
+      noExternal: ['@keystatic/core'],
+      resolve: {
+        conditions: ['worker', 'browser']
+      }
+    },
+    optimizeDeps: {
+      exclude: ['@keystatic/core']
     }
   }
 });

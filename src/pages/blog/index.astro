@@ -1,12 +1,20 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../../keystatic.config';
 
-const reader = createReader(import.meta.env.PWD || '.', keystaticConfig);
+// 在 Cloudflare Pages 環境中，使用條件導入
+let reader;
+try {
+  const { createReader } = await import('@keystatic/core/reader');
+  const keystaticConfig = (await import('../../../keystatic.config')).default;
+  const repoPath = import.meta.env.KEYSTATIC_GITHUB_OWNER ? '.' : (import.meta.env.PWD || '.');
+  reader = createReader(repoPath, keystaticConfig);
+} catch (e) {
+  console.warn('無法初始化 Keystatic reader:', e);
+  reader = null;
+}
 
 // 取得所有文章
-const allPosts = await reader.collections.posts.all();
+const allPosts = reader ? await reader.collections.posts.all() : [];
 
 // 處理文章資料，讀取標籤和分類的完整資訊
 const processedPosts = await Promise.all(
@@ -52,8 +60,8 @@ const sortedPosts = processedPosts.sort((a, b) => {
 });
 
 // 獲取所有分類和標籤用於過濾器
-const allCategories = await reader.collections.categories.all();
-const allTags = await reader.collections.tags.all();
+const allCategories = reader ? await reader.collections.categories.all() : [];
+const allTags = reader ? await reader.collections.tags.all() : [];
 ---
 
 <Layout 

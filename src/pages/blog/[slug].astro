@@ -1,11 +1,22 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../../keystatic.config';
 
-const reader = createReader(import.meta.env.PWD || '.', keystaticConfig);
+// 在 Cloudflare Pages 環境中，使用條件導入
+let reader;
+try {
+  const { createReader } = await import('@keystatic/core/reader');
+  const keystaticConfig = (await import('../../../keystatic.config')).default;
+  const repoPath = import.meta.env.KEYSTATIC_GITHUB_OWNER ? '.' : (import.meta.env.PWD || '.');
+  reader = createReader(repoPath, keystaticConfig);
+} catch (e) {
+  console.warn('無法初始化 Keystatic reader:', e);
+  reader = null;
+}
 
 export async function getStaticPaths() {
+  if (!reader) {
+    return [];
+  }
   const posts = await reader.collections.posts.all();
   
   // 處理每篇文章的標籤和分類
