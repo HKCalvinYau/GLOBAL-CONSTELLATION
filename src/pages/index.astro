@@ -97,7 +97,6 @@ try {
         <button onclick="scrollToSection('testimonials')" class="hover:text-indigo-600 transition">學員見證</button>
         <a href="/blog" class="hover:text-indigo-600 transition">部落格</a>
         <a href="/gallery" class="hover:text-indigo-600 transition">相片庫</a>
-        <a href="/testimonials" class="hover:text-indigo-600 transition">學員見證</a>
         <button onclick="scrollToSection('offer')" class="bg-indigo-900 text-white px-6 py-2 rounded-full hover:bg-indigo-800 transition transform hover:scale-105 shadow-lg">
           立即報名
         </button>
@@ -399,7 +398,7 @@ try {
         <!-- 見證 1 -->
         <div class="bg-slate-50 rounded-xl p-8 shadow-lg hover:shadow-xl transition duration-300 border border-slate-100">
           <div class="flex items-center gap-1 mb-4">
-            {[...Array(5)].map(() => (
+            {Array.from({ length: 5 }).map(() => (
               <svg class="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
               </svg>
@@ -422,7 +421,7 @@ try {
         <!-- 見證 2 -->
         <div class="bg-slate-50 rounded-xl p-8 shadow-lg hover:shadow-xl transition duration-300 border border-slate-100">
           <div class="flex items-center gap-1 mb-4">
-            {[...Array(5)].map(() => (
+            {Array.from({ length: 5 }).map(() => (
               <svg class="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
               </svg>
@@ -445,7 +444,7 @@ try {
         <!-- 見證 3 -->
         <div class="bg-slate-50 rounded-xl p-8 shadow-lg hover:shadow-xl transition duration-300 border border-slate-100">
           <div class="flex items-center gap-1 mb-4">
-            {[...Array(5)].map(() => (
+            {Array.from({ length: 5 }).map(() => (
               <svg class="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
               </svg>
@@ -625,8 +624,8 @@ try {
         </div>
 
         <!-- 更多相片項目 - 使用佔位圖片（共 6 個，總共 8 張相片） -->
-        {[...Array(6)].map((_, i) => (
-          <div class={`gallery-item group relative overflow-hidden rounded-lg cursor-pointer`} onclick={`openLightbox(${i + 2})`}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div class="gallery-item group relative overflow-hidden rounded-lg cursor-pointer" onclick={`openLightbox(${i + 2})`}>
             <div class="w-full h-64 bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 flex items-center justify-center">
               <div class="text-center">
                 <svg class="w-16 h-16 mx-auto text-indigo-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1045,14 +1044,24 @@ try {
       const lightbox = document.getElementById('lightbox');
       const lightboxImage = document.getElementById('lightboxImage');
       
+      if (!lightbox || !lightboxImage) {
+        console.warn('燈箱元素未找到');
+        return;
+      }
+      
       // 獲取所有相片項目的圖片
       const galleryItems = document.querySelectorAll('.gallery-item img');
-      if (galleryItems[index]) {
+      if (galleryItems[index] && galleryItems[index].src) {
         lightboxImage.src = galleryItems[index].src;
         lightboxImage.alt = galleryItems[index].alt || '相片';
-      } else {
+      } else if (galleryImages[index]) {
         // 如果是佔位圖片，使用預設圖片
-        lightboxImage.src = galleryImages[index] || galleryImages[0];
+        lightboxImage.src = galleryImages[index];
+        lightboxImage.alt = '相片';
+      } else {
+        // 如果都沒有，使用第一張圖片
+        lightboxImage.src = galleryImages[0] || '/lobo_lau.jpeg';
+        lightboxImage.alt = '相片';
       }
       
       lightbox.classList.remove('hidden');
@@ -1070,6 +1079,11 @@ try {
     function changeImage(direction) {
       const galleryItems = document.querySelectorAll('.gallery-item');
       const totalImages = galleryItems.length;
+      const lightboxImage = document.getElementById('lightboxImage');
+      
+      if (!lightboxImage || totalImages === 0) {
+        return;
+      }
       
       currentImageIndex += direction;
       
@@ -1079,12 +1093,14 @@ try {
         currentImageIndex = 0;
       }
       
-      const lightboxImage = document.getElementById('lightboxImage');
-      const clickedImage = galleryItems[currentImageIndex].querySelector('img');
+      const clickedImage = galleryItems[currentImageIndex]?.querySelector('img');
       
-      if (clickedImage) {
+      if (clickedImage && clickedImage.src) {
         lightboxImage.src = clickedImage.src;
         lightboxImage.alt = clickedImage.alt || '相片';
+      } else if (galleryImages[currentImageIndex]) {
+        lightboxImage.src = galleryImages[currentImageIndex];
+        lightboxImage.alt = '相片';
       }
     }
 

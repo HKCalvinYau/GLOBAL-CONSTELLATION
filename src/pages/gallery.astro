@@ -187,13 +187,10 @@ const totalPages = Math.ceil(galleryImages.length / itemsPerPage);
     }
   </style>
 
-  <script is:inline>
+  <script is:inline define:vars={{ totalPages, galleryImages }}>
     let currentPage = 1;
     const itemsPerPage = 8;
-    const totalPages = {totalPages};
-    const allImages = [
-      {galleryImages.map(img => `'${img.entry.image}'`).join(',')}
-    ];
+    const allImages = galleryImages.map((img) => img.entry.image);
     let currentImageIndex = 0;
 
     function changePage(direction) {

@@ -155,11 +155,11 @@ const content = await post.entry.content();
           </span>
         )}
         {post.tagsData && post.tagsData.length > 0 && (
-          post.tagsData.map((tag: any) => (
+          post.tagsData.map((tag: any) => 
             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-slate-100 text-slate-700">
               #{tag.entry.displayName}
             </span>
-          ))
+          )
         )}
       </div>
       

@@ -297,8 +297,58 @@
   - 相片庫和學員見證都有獨立的頁面和後台管理
   - 所有內容都可以通過 Keystatic 後台管理
 
+#### 19. 修復導航欄重複連結和 JavaScript 錯誤 ✅
+- **問題描述**：
+  1. 首頁導航欄有重複的「學員見證」連結（一個是 `scrollToSection('testimonials')`，另一個是 `/testimonials`）
+  2. 部落格頁面的 `filterPosts` 函數使用了未定義的 `event` 參數
+  3. 相片庫頁面的 JavaScript 模板字符串語法錯誤
+  4. 首頁相片庫燈箱功能缺少錯誤處理
+- **位置**：`src/pages/index.astro`、`src/pages/blog/index.astro`、`src/pages/gallery.astro`
+- **修復方法**：
+  1. **修復導航欄重複連結**：
+     - 移除重複的「學員見證」外部連結（`/testimonials`），保留 `scrollToSection('testimonials')` 用於首頁滾動
+  2. **修復部落格過濾功能**：
+     - 將 `onclick` 屬性改為使用 `data-filter-type` 和 `data-filter-value` 屬性
+     - 使用 `DOMContentLoaded` 事件監聽器為所有過濾按鈕添加點擊事件
+     - 移除對未定義 `event` 參數的依賴
+  3. **修復相片庫 JavaScript**：
+     - 修復模板字符串中的類型註解問題
+  4. **改進相片庫燈箱功能**：
+     - 添加空值檢查，防止元素未找到時出錯
+     - 改進圖片切換邏輯，處理佔位符圖片的情況
+     - 添加錯誤處理和回退機制
+- **修復狀態**：✅ 成功修復
+- **修復時間**：2024年12月
+- **功能說明**：
+  - 導航欄現在沒有重複連結
+  - 部落格過濾功能現在使用更可靠的事件處理方式
+  - 相片庫燈箱功能更加穩定，有完整的錯誤處理
+
+#### 20. 修復 Astro 模板中的 JSX 語法錯誤 ✅
+- **問題描述**：在 Astro 模板中使用了 JSX 的 `[...Array(n)].map()` 語法，這在 Astro 中無法正確工作，會導致瀏覽器渲染錯誤
+- **位置**：
+  1. `src/pages/index.astro` - 學員見證區塊（3處）
+  2. `src/pages/index.astro` - 相片庫區塊（1處）
+  3. `src/pages/testimonials.astro` - 評分顯示（1處）
+  4. `src/pages/blog/[slug].astro` - 標籤顯示（1處）
+  5. `src/pages/gallery.astro` - JavaScript 模板字符串語法錯誤
+- **修復方法**：
+  1. 將 `[...Array(n)].map()` 改為 `Array.from({ length: n }).map()`（Astro 兼容語法）
+  2. 修復 `gallery.astro` 中的 JavaScript 變數傳遞問題：
+     - 使用 `define:vars` 屬性將 Astro 變數傳遞給內聯腳本
+     - 修復模板字符串語法錯誤
+  3. 修復 `blog/[slug].astro` 中的 map 語法（移除不必要的括號）
+- **修復狀態**：✅ 成功修復
+- **修復時間**：2024年12月
+- **功能說明**：
+  - 所有頁面現在都能在瀏覽器中正確渲染
+  - 學員見證的5星評級正確顯示
+  - 相片庫的佔位符正確生成
+  - 標籤和分類顯示正常
+  - JavaScript 功能正常運作
+
 ### 修復統計
-- 總共修復：18 個問題
-- 成功修復：18 個
+- 總共修復：20 個問題
+- 成功修復：20 個
 - 待處理：0 個
 
