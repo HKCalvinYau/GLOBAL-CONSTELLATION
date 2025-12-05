@@ -2,14 +2,23 @@
 // 測試頁面：檢查環境變數和 Keystatic 配置
 export const prerender = false;
 
-const owner = import.meta.env.KEYSTATIC_GITHUB_OWNER;
-const repo = import.meta.env.KEYSTATIC_GITHUB_REPO;
-const token = import.meta.env.KEYSTATIC_GITHUB_TOKEN;
+// 在 Cloudflare Pages 中，環境變數通過 import.meta.env 訪問
+// 但可能需要使用 process.env 或 Astro.env
+const owner = import.meta.env.KEYSTATIC_GITHUB_OWNER || 
+              (typeof process !== 'undefined' ? process.env.KEYSTATIC_GITHUB_OWNER : undefined);
+const repo = import.meta.env.KEYSTATIC_GITHUB_REPO || 
+             (typeof process !== 'undefined' ? process.env.KEYSTATIC_GITHUB_REPO : undefined);
+const token = import.meta.env.KEYSTATIC_GITHUB_TOKEN || 
+              (typeof process !== 'undefined' ? process.env.KEYSTATIC_GITHUB_TOKEN : undefined);
 
+// 詳細日誌記錄
 console.log('測試頁面 - 環境變數檢查:', {
-  owner: owner ? '已設置' : '未設置',
-  repo: repo ? '已設置' : '未設置',
-  token: token ? '已設置' : '未設置'
+  owner: owner ? '已設置: ' + owner : '未設置',
+  repo: repo ? '已設置: ' + repo : '未設置',
+  token: token ? '已設置' : '未設置',
+  'import.meta.env.KEYSTATIC_GITHUB_OWNER': import.meta.env.KEYSTATIC_GITHUB_OWNER || 'undefined',
+  'import.meta.env.KEYSTATIC_GITHUB_REPO': import.meta.env.KEYSTATIC_GITHUB_REPO || 'undefined',
+  'import.meta.env.KEYSTATIC_GITHUB_TOKEN': import.meta.env.KEYSTATIC_GITHUB_TOKEN ? '已設置' : '未設置'
 });
 ---
 
