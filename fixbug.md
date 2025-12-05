@@ -347,8 +347,34 @@
   - 標籤和分類顯示正常
   - JavaScript 功能正常運作
 
+#### 21. 修復 Cloudflare Pages 構建錯誤 ✅
+- **問題描述**：在 Cloudflare Pages 構建時出現多個錯誤：
+  1. `TEsting.mdoc` 文件包含不允許的 `slug` 欄位，且缺少必需的 `title` 欄位
+  2. `qw.yaml` 分類文件的 `color` 值無效（值為 "v" 而不是有效的顏色代碼）
+  3. `wvrer.mdoc` 文件缺少 `title` 欄位
+  4. 多處代碼嘗試讀取 `undefined` 的屬性（`categoryData.entry.color`、`tag.entry.displayName` 等）
+- **位置**：
+  - `src/content/posts/TEsting.mdoc`
+  - `src/content/posts/wvrer.mdoc`
+  - `src/content/categories/qw.yaml`
+  - `src/pages/index.astro`
+  - `src/pages/blog/index.astro`
+  - `src/pages/blog/[slug].astro`
+- **修復方法**：
+  1. 修復 `TEsting.mdoc`：移除 `slug` 欄位，添加 `title` 欄位和 `views` 欄位
+  2. 修復 `wvrer.mdoc`：添加 `title` 欄位
+  3. 修復 `qw.yaml`：添加 `displayName` 欄位，將 `color` 從 "v" 改為有效的顏色代碼 "#3B82F6"
+  4. 在所有頁面中添加安全檢查（使用可選鏈操作符 `?.`）：
+     - `post.categoryData?.entry?.displayName`
+     - `post.categoryData.entry?.color`
+     - `tag?.entry?.displayName`
+  5. 改進分類和標籤讀取邏輯，添加空值檢查
+- **修復狀態**：✅ 成功修復
+- **修復時間**：2024年12月
+- **測試結果**：✅ 構建成功，所有頁面正常生成
+
 ### 修復統計
-- 總共修復：20 個問題
-- 成功修復：20 個
+- 總共修復：21 個問題
+- 成功修復：21 個
 - 待處理：0 個
 
