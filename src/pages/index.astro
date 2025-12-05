@@ -530,20 +530,22 @@ try {
                 
                 {/* 分類和標籤 */}
                 <div class="flex flex-wrap items-center gap-2 mb-3">
-                  {post.categoryData && (
+                  {post.categoryData?.entry?.displayName && (
                     <span 
                       class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
-                      style={post.categoryData.entry.color ? `background-color: ${post.categoryData.entry.color}20; color: ${post.categoryData.entry.color};` : ''}
+                      style={post.categoryData.entry?.color ? `background-color: ${post.categoryData.entry.color}20; color: ${post.categoryData.entry.color};` : ''}
                     >
                       {post.categoryData.entry.displayName}
                     </span>
                   )}
                   {post.tagsData && post.tagsData.length > 0 && (
-                    post.tagsData.slice(0, 2).map((tag: any) => (
-                      <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
-                        #{tag.entry.displayName}
-                      </span>
-                    ))
+                    post.tagsData.slice(0, 2).map((tag: any) => 
+                      tag?.entry?.displayName ? (
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                          #{tag.entry.displayName}
+                        </span>
+                      ) : null
+                    )
                   )}
                 </div>
                 
