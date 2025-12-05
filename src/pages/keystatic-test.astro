@@ -1,0 +1,116 @@
+---
+// 測試頁面：檢查環境變數和 Keystatic 配置
+export const prerender = false;
+
+const owner = import.meta.env.KEYSTATIC_GITHUB_OWNER;
+const repo = import.meta.env.KEYSTATIC_GITHUB_REPO;
+const token = import.meta.env.KEYSTATIC_GITHUB_TOKEN;
+
+console.log('測試頁面 - 環境變數檢查:', {
+  owner: owner ? '已設置' : '未設置',
+  repo: repo ? '已設置' : '未設置',
+  token: token ? '已設置' : '未設置'
+});
+---
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Keystatic 測試頁面</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .success { border-left: 4px solid #10b981; }
+    .error { border-left: 4px solid #ef4444; }
+    .warning { border-left: 4px solid #f59e0b; }
+    h1 { margin-top: 0; }
+    code {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status.ok { background: #d1fae5; color: #065f46; }
+    .status.missing { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔍 Keystatic 診斷測試</h1>
+    <p>這個頁面用於檢查環境變數和配置是否正確。</p>
+  </div>
+
+  <div class="card {owner && repo ? 'success' : 'error'}">
+    <h2>環境變數狀態</h2>
+    <ul style="list-style: none; padding: 0;">
+      <li style="margin: 10px 0;">
+        <code>KEYSTATIC_GITHUB_OWNER</code>:
+        <span class="status {owner ? 'ok' : 'missing'}">
+          {owner ? '✅ 已設置: ' + owner : '❌ 未設置'}
+        </span>
+      </li>
+      <li style="margin: 10px 0;">
+        <code>KEYSTATIC_GITHUB_REPO</code>:
+        <span class="status {repo ? 'ok' : 'missing'}">
+          {repo ? '✅ 已設置: ' + repo : '❌ 未設置'}
+        </span>
+      </li>
+      <li style="margin: 10px 0;">
+        <code>KEYSTATIC_GITHUB_TOKEN</code>:
+        <span class="status {token ? 'ok' : 'missing'}">
+          {token ? '✅ 已設置' : '⚠️ 未設置（如果倉庫是公開的則不需要）'}
+        </span>
+      </li>
+    </ul>
+  </div>
+
+  {owner && repo ? (
+    <div class="card success">
+      <h2>✅ 環境變數配置正確</h2>
+      <p>如果仍然無法訪問 <code>/keystatic</code>，可能是 Keystatic 本身的問題。</p>
+      <p>請查看運行時日誌以獲取更多信息。</p>
+    </div>
+  ) : (
+    <div class="card error">
+      <h2>❌ 環境變數未設置</h2>
+      <p>請在 Cloudflare Pages 設置中添加環境變數：</p>
+      <ol>
+        <li>進入 <strong>Settings</strong> → <strong>Environment variables</strong></li>
+        <li>添加 <code>KEYSTATIC_GITHUB_OWNER</code> = <code>HKCalvinYau</code></li>
+        <li>添加 <code>KEYSTATIC_GITHUB_REPO</code> = <code>GLOBAL-CONSTELLATION</code></li>
+        <li>選擇 <strong>All environments</strong></li>
+        <li>重新部署</li>
+      </ol>
+    </div>
+  )}
+
+  <div class="card warning">
+    <h2>📝 下一步</h2>
+    <ol>
+      <li>訪問 <a href="/keystatic">/keystatic</a> 查看是否正常工作</li>
+      <li>查看 Cloudflare Pages 的 <strong>Real-time Logs</strong></li>
+      <li>檢查是否有錯誤訊息</li>
+    </ol>
+  </div>
+</body>
+</html>
+
