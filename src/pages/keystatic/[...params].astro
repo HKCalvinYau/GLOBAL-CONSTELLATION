@@ -10,6 +10,13 @@ const owner = import.meta.env.KEYSTATIC_GITHUB_OWNER;
 const repo = import.meta.env.KEYSTATIC_GITHUB_REPO;
 const token = import.meta.env.KEYSTATIC_GITHUB_TOKEN;
 
+// 記錄環境變數狀態（用於調試）
+console.log('Keystatic 環境變數檢查:', {
+  owner: owner ? '已設置' : '未設置',
+  repo: repo ? '已設置' : '未設置',
+  token: token ? '已設置' : '未設置'
+});
+
 // 如果缺少必要的環境變數，顯示錯誤訊息
 if (!owner || !repo) {
   return new Response(
