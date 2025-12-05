@@ -5,9 +5,96 @@ import keystaticConfig from '../../../keystatic.config';
 
 export const prerender = false;
 
-const KeystaticPage = makePage(keystaticConfig);
+// 檢查環境變數
+const owner = import.meta.env.KEYSTATIC_GITHUB_OWNER;
+const repo = import.meta.env.KEYSTATIC_GITHUB_REPO;
+const token = import.meta.env.KEYSTATIC_GITHUB_TOKEN;
 
-const result = await KeystaticPage(Astro);
-return result;
+// 如果缺少必要的環境變數，顯示錯誤訊息
+if (!owner || !repo) {
+  return new Response(
+    `<!DOCTYPE html>
+<html>
+<head>
+  <title>Keystatic 配置錯誤</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+    .error { background: #fee; border: 1px solid #fcc; padding: 20px; border-radius: 8px; }
+    .info { background: #eef; border: 1px solid #ccf; padding: 20px; border-radius: 8px; margin-top: 20px; }
+    code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="error">
+    <h1>⚠️ Keystatic 配置錯誤</h1>
+    <p>缺少必要的環境變數：</p>
+    <ul>
+      ${!owner ? '<li><code>KEYSTATIC_GITHUB_OWNER</code> 未設置</li>' : ''}
+      ${!repo ? '<li><code>KEYSTATIC_GITHUB_REPO</code> 未設置</li>' : ''}
+    </ul>
+  </div>
+  <div class="info">
+    <h2>如何修復：</h2>
+    <ol>
+      <li>登入 <a href="https://dash.cloudflare.com/">Cloudflare Dashboard</a></li>
+      <li>進入 <strong>Pages</strong> → 選擇您的專案</li>
+      <li>點擊 <strong>Settings</strong> → <strong>Environment variables</strong></li>
+      <li>添加以下環境變數：
+        <ul>
+          <li><code>KEYSTATIC_GITHUB_OWNER</code> = <code>HKCalvinYau</code></li>
+          <li><code>KEYSTATIC_GITHUB_REPO</code> = <code>GLOBAL-CONSTELLATION</code></li>
+        </ul>
+      </li>
+      <li>選擇 <strong>All environments</strong>，然後點擊 <strong>Save</strong></li>
+      <li>重新部署專案</li>
+    </ol>
+    <p><strong>當前狀態：</strong></p>
+    <ul>
+      <li>KEYSTATIC_GITHUB_OWNER: ${owner || '❌ 未設置'}</li>
+      <li>KEYSTATIC_GITHUB_REPO: ${repo || '❌ 未設置'}</li>
+      <li>KEYSTATIC_GITHUB_TOKEN: ${token ? '✅ 已設置' : '⚠️ 未設置（如果倉庫是公開的則不需要）'}</li>
+    </ul>
+  </div>
+</body>
+</html>`,
+    {
+      status: 500,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' }
+    }
+  );
+}
+
+try {
+  const KeystaticPage = makePage(keystaticConfig);
+  const result = await KeystaticPage(Astro);
+  return result;
+} catch (error) {
+  console.error('Keystatic 錯誤:', error);
+  return new Response(
+    `<!DOCTYPE html>
+<html>
+<head>
+  <title>Keystatic 錯誤</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+    .error { background: #fee; border: 1px solid #fcc; padding: 20px; border-radius: 8px; }
+    pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <div class="error">
+    <h1>❌ Keystatic 運行錯誤</h1>
+    <p>發生以下錯誤：</p>
+    <pre>${error instanceof Error ? error.message : String(error)}</pre>
+    <p>請檢查 Cloudflare Pages 的構建日誌以獲取更多信息。</p>
+  </div>
+</body>
+</html>`,
+    {
+      status: 500,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' }
+    }
+  );
+}
 ---
 
