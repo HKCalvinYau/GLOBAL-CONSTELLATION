@@ -1,66 +1,76 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 
-// 在 Cloudflare Pages 構建時，完全避免導入 reader
-let reader = null;
-if (import.meta.env.KEYSTATIC_GITHUB_OWNER && import.meta.env.KEYSTATIC_GITHUB_REPO) {
+export async function getStaticPaths() {
+  // 在構建時初始化 reader（如果環境變數未設置，直接返回空數組）
+  if (!import.meta.env.KEYSTATIC_GITHUB_OWNER || !import.meta.env.KEYSTATIC_GITHUB_REPO) {
+    return [];
+  }
+  
+  let reader = null;
   try {
     const readerModule = await import(/* @vite-ignore */ '@keystatic/core/reader');
     const configModule = await import(/* @vite-ignore */ '../../../keystatic.config');
     reader = readerModule.createReader('.', configModule.default);
   } catch (e) {
     console.warn('無法初始化 Keystatic reader:', e);
+    return [];
   }
-}
-
-export async function getStaticPaths() {
+  
+  // 如果 reader 未初始化，返回空數組
   if (!reader) {
     return [];
   }
-  const posts = await reader.collections.posts.all();
   
-  // 處理每篇文章的標籤和分類
-  const processedPosts = await Promise.all(
-    posts.map(async (post) => {
-      // 讀取分類資訊
-      let categoryData = null;
-      if (post.entry.category) {
-        try {
-          categoryData = await reader.collections.categories.read(post.entry.category);
-        } catch (e) {
-          console.warn(`無法讀取分類: ${post.entry.category}`, e);
-        }
-      }
-
-      // 讀取標籤資訊
-      const tagsData = [];
-      if (post.entry.tags && Array.isArray(post.entry.tags)) {
-        for (const tagSlug of post.entry.tags) {
+  try {
+    const posts = await reader.collections.posts.all();
+  
+    // 處理每篇文章的標籤和分類
+    const processedPosts = await Promise.all(
+      posts.map(async (post) => {
+        // 讀取分類資訊
+        let categoryData = null;
+        if (post.entry.category && reader) {
           try {
-            const tagData = await reader.collections.tags.read(tagSlug);
-            if (tagData) {
-              tagsData.push(tagData);
-            }
+            categoryData = await reader.collections.categories.read(post.entry.category);
           } catch (e) {
-            console.warn(`無法讀取標籤: ${tagSlug}`, e);
+            console.warn(`無法讀取分類: ${post.entry.category}`, e);
           }
         }
-      }
 
-      return {
-    params: { slug: post.slug },
-        props: {
-          post: {
-            ...post,
-            categoryData,
-            tagsData,
+        // 讀取標籤資訊
+        const tagsData = [];
+        if (post.entry.tags && Array.isArray(post.entry.tags) && reader) {
+          for (const tagSlug of post.entry.tags) {
+            try {
+              const tagData = await reader.collections.tags.read(tagSlug);
+              if (tagData) {
+                tagsData.push(tagData);
+              }
+            } catch (e) {
+              console.warn(`無法讀取標籤: ${tagSlug}`, e);
+            }
+          }
+        }
+
+        return {
+          params: { slug: post.slug },
+          props: {
+            post: {
+              ...post,
+              categoryData,
+              tagsData,
+            },
           },
-        },
-      };
-    })
-  );
-  
-  return processedPosts;
+        };
+      })
+    );
+    
+    return processedPosts;
+  } catch (e) {
+    console.warn('無法讀取部落格文章:', e);
+    return [];
+  }
 }
 
 interface Props {
