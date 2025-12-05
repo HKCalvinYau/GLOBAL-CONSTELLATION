@@ -1,0 +1,277 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+
+const reader = createReader(import.meta.env.PWD || '.', keystaticConfig);
+
+// 取得所有文章
+const allPosts = await reader.collections.posts.all();
+
+// 處理文章資料，讀取標籤和分類的完整資訊
+const processedPosts = await Promise.all(
+  allPosts.map(async (post) => {
+    // 讀取分類資訊
+    let categoryData = null;
+    if (post.entry.category) {
+      try {
+        categoryData = await reader.collections.categories.read(post.entry.category);
+      } catch (e) {
+        console.warn(`無法讀取分類: ${post.entry.category}`, e);
+      }
+    }
+
+    // 讀取標籤資訊
+    const tagsData = [];
+    if (post.entry.tags && Array.isArray(post.entry.tags)) {
+      for (const tagSlug of post.entry.tags) {
+        try {
+          const tagData = await reader.collections.tags.read(tagSlug);
+          if (tagData) {
+            tagsData.push(tagData);
+          }
+        } catch (e) {
+          console.warn(`無法讀取標籤: ${tagSlug}`, e);
+        }
+      }
+    }
+
+    return {
+      ...post,
+      categoryData,
+      tagsData,
+    };
+  })
+);
+
+// 按發布日期排序（最新的在前）
+const sortedPosts = processedPosts.sort((a, b) => {
+  const dateA = new Date(a.entry.publishedDate);
+  const dateB = new Date(b.entry.publishedDate);
+  return dateB.getTime() - dateA.getTime();
+});
+
+// 獲取所有分類和標籤用於過濾器
+const allCategories = await reader.collections.categories.all();
+const allTags = await reader.collections.tags.all();
+---
+
+<Layout 
+  title="部落格 | AMAR"
+  description="探索家族系統排列的深度文章，了解療癒與成長的智慧。"
+>
+  <!-- Navbar -->
+  <nav class="fixed w-full z-50 transition-all duration-300 bg-white/90 backdrop-blur-md shadow-md py-3">
+    <div class="container mx-auto px-6 flex justify-between items-center">
+      <div class="text-2xl font-serif font-bold text-indigo-900 tracking-wider flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 002 2h2.945M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <a href="/">AMAR</a>
+      </div>
+      <div class="hidden md:flex items-center gap-8 font-medium text-slate-600">
+        <a href="/#problem" class="hover:text-indigo-600 transition">生命卡點</a>
+        <a href="/#method" class="hover:text-indigo-600 transition">系統原理</a>
+        <a href="/#instructor" class="hover:text-indigo-600 transition">導師介紹</a>
+        <a href="/blog" class="text-indigo-600 font-semibold">部落格</a>
+        <a href="/#offer" class="bg-indigo-900 text-white px-6 py-2 rounded-full hover:bg-indigo-800 transition">
+          立即報名
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Blog Header -->
+  <header class="pt-24 pb-12 bg-gradient-to-br from-slate-50 via-indigo-50 to-slate-200">
+    <div class="container mx-auto px-6 text-center">
+      <h1 class="text-4xl md:text-5xl font-serif font-bold text-slate-900 mb-4">
+        部落格
+      </h1>
+      <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+        探索家族系統排列的深度文章，了解療癒與成長的智慧
+      </p>
+    </div>
+  </header>
+
+  <!-- Filter Section -->
+  <main class="container mx-auto px-6 py-8">
+    <div class="mb-8">
+      <div class="flex flex-wrap items-center gap-4 mb-4">
+        <span class="text-sm font-medium text-slate-700">篩選：</span>
+        <button 
+          id="filterAll" 
+          class="filter-btn active px-4 py-2 rounded-full text-sm font-medium bg-indigo-900 text-white hover:bg-indigo-800 transition"
+          onclick="filterPosts('all')"
+        >
+          全部
+        </button>
+        {allCategories.map((category) => (
+          <button 
+            class={`filter-btn px-4 py-2 rounded-full text-sm font-medium bg-white border border-slate-200 hover:bg-indigo-50 transition`}
+            style={category.entry.color ? `border-color: ${category.entry.color}; color: ${category.entry.color};` : ''}
+            onclick={`filterPosts('category', '${category.slug}')`}
+          >
+            {category.entry.displayName}
+          </button>
+        ))}
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        {allTags.map((tag) => (
+          <button 
+            class="filter-btn px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition"
+            onclick={`filterPosts('tag', '${tag.slug}')`}
+          >
+            #{tag.entry.displayName}
+          </button>
+        ))}
+      </div>
+    </div>
+
+  <!-- Blog Posts List -->
+    <div class="py-4">
+    {sortedPosts.length === 0 ? (
+      <div class="text-center py-12">
+        <p class="text-slate-500 text-lg">目前尚無文章，請到 Keystatic 後台新增文章。</p>
+        <a 
+          href="/keystatic" 
+          class="inline-block mt-4 bg-indigo-900 text-white px-6 py-3 rounded-full hover:bg-indigo-800 transition"
+        >
+          前往 Keystatic 後台
+        </a>
+      </div>
+    ) : (
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8" id="postsGrid">
+        {sortedPosts.map((post) => (
+          <article 
+            class="post-card bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition duration-300"
+            data-category={post.entry.category || ''}
+            data-tags={post.entry.tags ? post.entry.tags.join(',') : ''}
+            data-featured={post.entry.featured ? 'true' : 'false'}
+          >
+            {post.entry.coverImage && (
+              <a href={`/blog/${post.slug}`} class="relative block">
+                <img 
+                  src={post.entry.coverImage} 
+                  alt={post.entry.title}
+                  class="w-full h-48 object-cover"
+                />
+                {post.entry.featured && (
+                  <div class="absolute top-2 right-2 bg-amber-400 text-white px-2 py-1 rounded-full flex items-center gap-1 text-xs font-bold shadow-lg">
+                    <span>👍</span>
+                    <span>推介</span>
+                  </div>
+                )}
+              </a>
+            )}
+            <div class="p-6">
+              <div class="flex items-center gap-4 text-sm text-slate-500 mb-3">
+                <time>
+                {new Date(post.entry.publishedDate).toLocaleDateString('zh-TW', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </time>
+                <span class="flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
+                  {post.entry.views || 0} 次閱讀
+                </span>
+              </div>
+              
+              <h2 class="text-xl font-bold text-slate-900 mt-2 mb-3">
+                <a 
+                  href={`/blog/${post.slug}`}
+                  class="hover:text-indigo-600 transition"
+                >
+                  {post.entry.title}
+                </a>
+              </h2>
+              
+              {/* 分類和標籤 */}
+              <div class="flex flex-wrap items-center gap-2 mb-3">
+                {post.categoryData && (
+                  <span 
+                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                    style={post.categoryData.entry.color ? `background-color: ${post.categoryData.entry.color}20; color: ${post.categoryData.entry.color};` : ''}
+                  >
+                    {post.categoryData.entry.displayName}
+                  </span>
+                )}
+                {post.tagsData && post.tagsData.length > 0 && (
+                  post.tagsData.map((tag: any) => (
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                      #{tag.entry.displayName}
+                    </span>
+                  ))
+                )}
+              </div>
+              
+              {post.entry.excerpt && (
+                <p class="text-slate-600 mb-4 line-clamp-3">
+                  {post.entry.excerpt}
+                </p>
+              )}
+              <a 
+                href={`/blog/${post.slug}`}
+                class="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-800 transition"
+              >
+                閱讀更多
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                </svg>
+              </a>
+            </div>
+          </article>
+        ))}
+      </div>
+    )}
+    </div>
+  </main>
+
+  <script is:inline>
+    function filterPosts(type, value) {
+      const posts = document.querySelectorAll('.post-card');
+      const filterButtons = document.querySelectorAll('.filter-btn');
+      
+      // 更新按鈕狀態
+      filterButtons.forEach(btn => {
+        btn.classList.remove('active', 'bg-indigo-900', 'text-white');
+        btn.classList.add('bg-white', 'border', 'border-slate-200');
+      });
+      
+      event.target.classList.add('active', 'bg-indigo-900', 'text-white');
+      event.target.classList.remove('bg-white', 'border', 'border-slate-200');
+      
+      // 過濾文章
+      posts.forEach(post => {
+        let show = false;
+        
+        if (type === 'all') {
+          show = true;
+        } else if (type === 'category') {
+          show = post.dataset.category === value;
+        } else if (type === 'tag') {
+          const tags = post.dataset.tags.split(',');
+          show = tags.includes(value);
+        }
+        
+        if (show) {
+          post.style.display = 'block';
+        } else {
+          post.style.display = 'none';
+        }
+      });
+    }
+  </script>
+
+  <!-- Footer -->
+  <footer class="bg-slate-950 text-slate-400 py-12 border-t border-slate-800 mt-12">
+    <div class="container mx-auto px-6 text-center">
+      <p class="text-sm">© 2024 AMAR. All rights reserved.</p>
+    </div>
+  </footer>
+</Layout>
+

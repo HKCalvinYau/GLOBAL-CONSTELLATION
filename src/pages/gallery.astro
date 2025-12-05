@@ -1,0 +1,267 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../keystatic.config';
+
+const reader = createReader(import.meta.env.PWD || '.', keystaticConfig);
+
+// 獲取所有相片（按排序順序）
+let galleryImages = [];
+try {
+  const allImages = await reader.collections.gallery.all();
+  galleryImages = allImages
+    .sort((a: any, b: any) => {
+      const orderA = parseInt(a.entry.order || '999') || 999;
+      const orderB = parseInt(b.entry.order || '999') || 999;
+      return orderA - orderB;
+    })
+    .slice(0, 16); // 最多16張
+} catch (e) {
+  console.warn('無法讀取相片庫:', e);
+}
+
+// 分頁設置（每頁8張）
+const itemsPerPage = 8;
+const totalPages = Math.ceil(galleryImages.length / itemsPerPage);
+---
+
+<Layout 
+  title="相片庫 | AMAR"
+  description="記錄工作坊的珍貴時刻，見證每一次療癒與轉化的瞬間。"
+>
+  <!-- Navbar -->
+  <nav class="fixed w-full z-50 transition-all duration-300 bg-white/90 backdrop-blur-md shadow-md py-3">
+    <div class="container mx-auto px-6 flex justify-between items-center">
+      <div class="text-2xl font-serif font-bold text-indigo-900 tracking-wider flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 002 2h2.945M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <a href="/">AMAR</a>
+      </div>
+      <div class="hidden md:flex items-center gap-8 font-medium text-slate-600">
+        <a href="/#problem" class="hover:text-indigo-600 transition">生命卡點</a>
+        <a href="/#method" class="hover:text-indigo-600 transition">系統原理</a>
+        <a href="/#instructor" class="hover:text-indigo-600 transition">導師介紹</a>
+        <a href="/gallery" class="text-indigo-600 font-semibold">相片庫</a>
+        <a href="/#offer" class="bg-indigo-900 text-white px-6 py-2 rounded-full hover:bg-indigo-800 transition">
+          立即報名
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Gallery Header -->
+  <header class="pt-24 pb-12 bg-gradient-to-br from-slate-50 via-indigo-50 to-slate-200">
+    <div class="container mx-auto px-6 text-center">
+      <h1 class="text-4xl md:text-5xl font-serif font-bold text-slate-900 mb-4">
+        相片庫
+      </h1>
+      <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+        記錄工作坊的珍貴時刻，見證每一次療癒與轉化的瞬間
+      </p>
+    </div>
+  </header>
+
+  <!-- Gallery Grid - Masonry Style -->
+  <main class="container mx-auto px-6 py-12">
+    {galleryImages.length === 0 ? (
+      <div class="text-center py-12">
+        <p class="text-slate-500 text-lg">目前尚無相片，請到 Keystatic 後台新增相片。</p>
+        <a 
+          href="/keystatic" 
+          class="inline-block mt-4 bg-indigo-900 text-white px-6 py-3 rounded-full hover:bg-indigo-800 transition"
+        >
+          前往 Keystatic 後台
+        </a>
+      </div>
+    ) : (
+      <>
+        <div class="masonry-grid" id="galleryGrid">
+          {galleryImages.map((image: any, index: number) => (
+            <div 
+              class="gallery-item group relative overflow-hidden rounded-lg cursor-pointer"
+              onclick={`openLightbox(${index})`}
+              style={`grid-row: span ${Math.floor(Math.random() * 2) + 2};`}
+            >
+              <img 
+                src={image.entry.image} 
+                alt={image.entry.title || `相片 ${index + 1}`}
+                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+              />
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                </svg>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <!-- Pagination -->
+        {totalPages > 1 && (
+          <div class="flex justify-center items-center gap-2 mt-12">
+            <button 
+              id="prevPage" 
+              class="px-4 py-2 rounded-lg bg-white border border-slate-200 hover:bg-indigo-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              onclick="changePage(-1)"
+            >
+              上一頁
+            </button>
+            <span class="px-4 py-2 text-slate-600">
+              第 <span id="currentPage">1</span> 頁，共 {totalPages} 頁
+            </span>
+            <button 
+              id="nextPage" 
+              class="px-4 py-2 rounded-lg bg-white border border-slate-200 hover:bg-indigo-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              onclick="changePage(1)"
+            >
+              下一頁
+            </button>
+          </div>
+        )}
+      </>
+    )}
+  </main>
+
+  <!-- Lightbox Modal -->
+  <div id="lightbox" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center p-4">
+    <button 
+      onclick="closeLightbox()" 
+      class="absolute top-4 right-4 text-white hover:text-indigo-400 transition z-10"
+    >
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+    <button 
+      onclick="changeImage(-1)" 
+      class="absolute left-4 text-white hover:text-indigo-400 transition z-10"
+    >
+      <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+      </svg>
+    </button>
+    <button 
+      onclick="changeImage(1)" 
+      class="absolute right-4 text-white hover:text-indigo-400 transition z-10"
+    >
+      <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+      </svg>
+    </button>
+    <img 
+      id="lightboxImage" 
+      src="" 
+      alt="相片" 
+      class="max-w-full max-h-[90vh] object-contain rounded-lg"
+    />
+  </div>
+
+  <style>
+    .masonry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      grid-auto-rows: 10px;
+      gap: 16px;
+    }
+    
+    .gallery-item {
+      grid-row-end: span var(--row-span, 20);
+    }
+    
+    @media (min-width: 768px) {
+      .masonry-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      }
+    }
+  </style>
+
+  <script is:inline>
+    let currentPage = 1;
+    const itemsPerPage = 8;
+    const totalPages = {totalPages};
+    const allImages = [
+      {galleryImages.map(img => `'${img.entry.image}'`).join(',')}
+    ];
+    let currentImageIndex = 0;
+
+    function changePage(direction) {
+      currentPage += direction;
+      
+      if (currentPage < 1) currentPage = 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+      
+      document.getElementById('currentPage').textContent = currentPage;
+      if (document.getElementById('prevPage')) {
+        document.getElementById('prevPage').disabled = currentPage === 1;
+      }
+      if (document.getElementById('nextPage')) {
+        document.getElementById('nextPage').disabled = currentPage === totalPages;
+      }
+      
+      // 顯示對應頁面的相片
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const items = document.querySelectorAll('.gallery-item');
+      
+      items.forEach((item, index) => {
+        if (index >= startIndex && index < endIndex) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    function openLightbox(index) {
+      currentImageIndex = index;
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImage = document.getElementById('lightboxImage');
+      const items = document.querySelectorAll('.gallery-item img');
+      if (items[index]) {
+        lightboxImage.src = items[index].src;
+        lightbox.classList.remove('hidden');
+        lightbox.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeLightbox() {
+      const lightbox = document.getElementById('lightbox');
+      lightbox.classList.add('hidden');
+      lightbox.classList.remove('flex');
+      document.body.style.overflow = '';
+    }
+
+    function changeImage(direction) {
+      const items = document.querySelectorAll('.gallery-item img');
+      currentImageIndex += direction;
+      if (currentImageIndex < 0) currentImageIndex = items.length - 1;
+      if (currentImageIndex >= items.length) currentImageIndex = 0;
+      if (items[currentImageIndex]) {
+        document.getElementById('lightboxImage').src = items[currentImageIndex].src;
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      const lightbox = document.getElementById('lightbox');
+      if (e.key === 'Escape' && !lightbox.classList.contains('hidden')) {
+        closeLightbox();
+      }
+      if (e.key === 'ArrowLeft' && !lightbox.classList.contains('hidden')) {
+        changeImage(-1);
+      }
+      if (e.key === 'ArrowRight' && !lightbox.classList.contains('hidden')) {
+        changeImage(1);
+      }
+    });
+  </script>
+
+  <!-- Footer -->
+  <footer class="bg-slate-950 text-slate-400 py-12 border-t border-slate-800 mt-12">
+    <div class="container mx-auto px-6 text-center">
+      <p class="text-sm">© 2024 AMAR. All rights reserved.</p>
+    </div>
+  </footer>
+</Layout>
+

@@ -1,0 +1,48 @@
+{
+  "name": "global-constellation",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "GLOBAL CONSTELLATION 課程報名系統 - Astro + Cloudflare Workers + Hono + D1",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "astro dev",
+    "dev:workers": "wrangler dev",
+    "start": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create global-constellation-db",
+    "db:migrate": "wrangler d1 execute global-constellation-db --file=./schema.sql",
+    "db:migrate:local": "wrangler d1 execute global-constellation-db --local --file=./schema.sql",
+    "db:query": "wrangler d1 execute global-constellation-db --command",
+    "db:query:local": "wrangler d1 execute global-constellation-db --local --command"
+  },
+  "keywords": [
+    "astro",
+    "cloudflare",
+    "workers",
+    "hono",
+    "d1",
+    "keystatic",
+    "tailwind"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@astrojs/cloudflare": "^11.0.0",
+    "@astrojs/tailwind": "^5.1.0",
+    "@keystatic/astro": "^5.0.6",
+    "@keystatic/core": "^0.5.48",
+    "astro": "^4.0.0",
+    "hono": "^4.0.0",
+    "tailwindcss": "^3.4.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241106.0",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.0.0"
+  }
+}
+

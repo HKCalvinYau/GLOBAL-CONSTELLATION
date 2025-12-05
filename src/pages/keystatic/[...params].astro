@@ -1,0 +1,13 @@
+---
+// Keystatic 後台路由
+import { makePage } from '@keystatic/astro/ui';
+import keystaticConfig from '../../../keystatic.config';
+
+export const prerender = false;
+
+const KeystaticPage = makePage(keystaticConfig);
+
+const result = await KeystaticPage(Astro);
+return result;
+---
+

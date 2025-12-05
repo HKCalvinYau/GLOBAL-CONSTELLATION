@@ -1,0 +1,1100 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../keystatic.config';
+
+const reader = createReader(import.meta.env.PWD || '.', keystaticConfig);
+
+// 取得最新的部落格文章（最多 6 篇）
+let latestPosts = [];
+try {
+  const allPosts = await reader.collections.posts.all();
+  
+  // 處理文章資料，讀取標籤和分類的完整資訊
+  const processedPosts = await Promise.all(
+    allPosts.map(async (post) => {
+      // 讀取分類資訊
+      let categoryData = null;
+      if (post.entry.category) {
+        try {
+          categoryData = await reader.collections.categories.read(post.entry.category);
+        } catch (e) {
+          console.warn(`無法讀取分類: ${post.entry.category}`, e);
+        }
+      }
+
+      // 讀取標籤資訊
+      const tagsData = [];
+      if (post.entry.tags && Array.isArray(post.entry.tags)) {
+        for (const tagSlug of post.entry.tags) {
+          try {
+            const tagData = await reader.collections.tags.read(tagSlug);
+            if (tagData) {
+              tagsData.push(tagData);
+            }
+          } catch (e) {
+            console.warn(`無法讀取標籤: ${tagSlug}`, e);
+          }
+        }
+      }
+
+      return {
+        ...post,
+        categoryData,
+        tagsData,
+      };
+    })
+  );
+
+  // 按發布日期排序（最新的在前），取前 6 篇
+  latestPosts = processedPosts
+    .sort((a, b) => {
+      const dateA = new Date(a.entry.publishedDate);
+      const dateB = new Date(b.entry.publishedDate);
+      return dateB.getTime() - dateA.getTime();
+    })
+    .slice(0, 6);
+} catch (e) {
+  console.warn('無法讀取部落格文章:', e);
+}
+---
+
+<Layout>
+  <!-- SEO Metadata Structure -->
+  <div class="hidden">
+    <h1>國際家族系統排列權威課程 - 重寫生命藍圖</h1>
+    <p>由國際級導師帶領，透過系統排列解決原生家庭創傷、兩性關係卡點與金錢能量流動問題。</p>
+  </div>
+  
+  <!-- Navbar -->
+  <nav id="navbar" class="fixed w-full z-50 transition-all duration-300 bg-transparent py-5">
+    <div class="container mx-auto px-6 flex justify-between items-center">
+      <div class="text-2xl font-serif font-bold text-indigo-900 tracking-wider flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 002 2h2.945M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span>AMAR</span>
+      </div>
+      
+      <!-- Desktop Menu -->
+      <div class="hidden md:flex items-center gap-8 font-medium text-slate-600">
+        <button onclick="scrollToSection('problem')" class="hover:text-indigo-600 transition">生命卡點</button>
+        <button onclick="scrollToSection('method')" class="hover:text-indigo-600 transition">系統原理</button>
+        <button onclick="scrollToSection('instructor')" class="hover:text-indigo-600 transition">導師介紹</button>
+        <button onclick="scrollToSection('testimonials')" class="hover:text-indigo-600 transition">學員見證</button>
+        <a href="/blog" class="hover:text-indigo-600 transition">部落格</a>
+        <a href="/gallery" class="hover:text-indigo-600 transition">相片庫</a>
+        <a href="/testimonials" class="hover:text-indigo-600 transition">學員見證</a>
+        <button onclick="scrollToSection('offer')" class="bg-indigo-900 text-white px-6 py-2 rounded-full hover:bg-indigo-800 transition transform hover:scale-105 shadow-lg">
+          立即報名
+        </button>
+      </div>
+
+      <!-- Mobile Menu Button -->
+      <button id="menuToggle" class="md:hidden" onclick="toggleMenu()">
+        <svg id="menuIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+        <svg id="closeIcon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="hidden absolute top-full left-0 w-full bg-white shadow-xl py-4 flex-col items-center gap-4 md:hidden border-t">
+      <button onclick="scrollToSection('problem')" class="w-full py-2 text-center hover:bg-slate-50">生命卡點</button>
+      <button onclick="scrollToSection('method')" class="w-full py-2 text-center hover:bg-slate-50">系統原理</button>
+      <button onclick="scrollToSection('instructor')" class="w-full py-2 text-center hover:bg-slate-50">導師介紹</button>
+      <a href="/testimonials" class="w-full py-2 text-center hover:bg-slate-50">學員見證</a>
+      <a href="/blog" class="w-full py-2 text-center hover:bg-slate-50">部落格</a>
+      <a href="/gallery" class="w-full py-2 text-center hover:bg-slate-50">相片庫</a>
+      <button onclick="scrollToSection('offer')" class="text-indigo-900 font-bold">立即報名</button>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
+    <!-- Background Gradients -->
+    <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-slate-50 via-indigo-50 to-slate-200 -z-20"></div>
+    <div class="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-200/30 rounded-full blur-[100px] -z-10"></div>
+    <div class="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-200/30 rounded-full blur-[100px] -z-10"></div>
+
+    <div class="container mx-auto px-6 text-center md:text-left md:flex md:items-center md:justify-between">
+      <div class="md:w-1/2 space-y-8 animate-fade-in-up">
+        <div class="inline-block px-4 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-semibold tracking-wide mb-2">
+          國際級深層療癒・AI 時代的身心靈整合
+        </div>
+        <h1 class="text-4xl md:text-6xl font-serif font-bold text-slate-900 leading-tight">
+          看見隱形的牽連<br />
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+            讓愛與豐盛重新流動
+          </span>
+        </h1>
+        <p class="text-lg md:text-xl text-slate-600 leading-relaxed max-w-lg">
+          你的困境，可能不只屬於你。透過家族系統排列（Family Constellation），我們解開世代傳承的潛意識糾葛，將失序歸位，讓生命力量回歸。
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 pt-4">
+          <button onclick="scrollToSection('offer')" class="flex items-center justify-center gap-2 bg-indigo-900 text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-indigo-800 transition shadow-xl hover:shadow-2xl transform hover:-translate-y-1">
+            開啟療癒之旅
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+            </svg>
+          </button>
+          <button onclick="scrollToSection('method')" class="flex items-center justify-center gap-2 bg-white text-indigo-900 border border-indigo-200 px-8 py-4 rounded-full text-lg font-medium hover:bg-indigo-50 transition">
+            了解排列原理
+          </button>
+        </div>
+        
+        <div class="flex items-center gap-4 text-sm text-slate-500 pt-4">
+          <div class="flex -space-x-2">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 border-2 border-white flex items-center justify-center text-white font-bold text-xs">U1</div>
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 border-2 border-white flex items-center justify-center text-white font-bold text-xs">U2</div>
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 border-2 border-white flex items-center justify-center text-white font-bold text-xs">U3</div>
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 border-2 border-white flex items-center justify-center text-white font-bold text-xs">U4</div>
+          </div>
+          <p>已有超過 10,000+ 人次見證改變</p>
+        </div>
+      </div>
+
+      <div class="md:w-1/2 mt-12 md:mt-0 relative">
+        <!-- Abstract visual representing constellation field -->
+        <div class="relative w-full max-w-md mx-auto aspect-square">
+          <div class="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full opacity-10 animate-pulse"></div>
+          <div class="absolute inset-4 border border-indigo-200 rounded-full flex items-center justify-center">
+            <div class="w-2/3 h-2/3 bg-slate-100 rounded-full shadow-2xl flex items-center justify-center relative overflow-hidden">
+              <div class="w-full h-full bg-gradient-to-br from-indigo-200 via-purple-200 to-pink-200 flex items-center justify-center">
+                <div class="text-center text-slate-600">
+                  <svg class="w-16 h-16 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                  </svg>
+                  <p class="text-xs opacity-70">Family Constellation</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Floating elements -->
+          <div class="absolute top-0 right-10 bg-white p-3 rounded-xl shadow-lg animate-bounce" style="animation-duration: 3s;">
+            <svg class="text-rose-500 w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+            </svg>
+          </div>
+          <div class="absolute bottom-10 left-0 bg-white p-3 rounded-xl shadow-lg animate-bounce" style="animation-duration: 4s;">
+            <svg class="text-indigo-500 w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Problem Section -->
+  <section id="problem" class="py-24 bg-white">
+    <div class="container mx-auto px-6">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-6">你是否感覺生命在「重複」？</h2>
+        <p class="text-lg text-slate-600">
+          很多時候，我們的痛苦並非來自個人，而是來自於家族集體潛意識的「盲目忠誠」。
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-slate-50 p-8 rounded-2xl hover:shadow-xl transition duration-300 border border-slate-100">
+          <div class="bg-white w-16 h-16 rounded-full flex items-center justify-center shadow-sm mb-6">
+            <svg class="w-8 h-8 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">情感關係受阻</h3>
+          <p class="text-slate-600 leading-relaxed">無論換過多少伴侶，總是在同樣的模式中受傷？或是難以進入親密關係，害怕承諾？</p>
+        </div>
+        <div class="bg-slate-50 p-8 rounded-2xl hover:shadow-xl transition duration-300 border border-slate-100">
+          <div class="bg-white w-16 h-16 rounded-full flex items-center justify-center shadow-sm mb-6">
+            <svg class="w-8 h-8 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">莫名的情緒重擔</h3>
+          <p class="text-slate-600 leading-relaxed">常常感到沒有來由的焦慮、憂鬱或憤怒？感覺自己活得不像自己，背負著別人的命運？</p>
+        </div>
+        <div class="bg-slate-50 p-8 rounded-2xl hover:shadow-xl transition duration-300 border border-slate-100">
+          <div class="bg-white w-16 h-16 rounded-full flex items-center justify-center shadow-sm mb-6">
+            <svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">事業與金錢卡關</h3>
+          <p class="text-slate-600 leading-relaxed">明明很努力，財富卻留不住？事業到了某個瓶頸就無法突破，彷彿有無形的天花板？</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Methodology Section -->
+  <section id="method" class="py-24 bg-slate-900 text-white relative overflow-hidden">
+    <article class="sr-only">
+      <h2>什麼是家族系統排列？</h2>
+      <p>家族系統排列 (Family Constellation) 是由海寧格 (Bert Hellinger) 發展出的心理治療方法。它透過場域 (The Field) 的現象學觀察，揭露家族中被隱藏的動力，如序位法則 (Orders of Love) 的失衡。</p>
+    </article>
+
+    <div class="container mx-auto px-6 relative z-10">
+      <div class="flex flex-col md:flex-row items-center gap-16">
+        <div class="md:w-1/2">
+          <h2 class="text-3xl md:text-4xl font-serif font-bold mb-6">系統排列：看見真相，即是療癒的開始</h2>
+          <div class="space-y-6 text-slate-300 text-lg">
+            <p>
+              我們就像懸掛在風鈴上的一員，當其中一個晃動，整體都會受到影響。家族系統排列是一門關於「關係」與「序位」的學問。
+            </p>
+            <ul class="space-y-4">
+              <li class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>整體法則：家族中每個人都有歸屬的權利</span>
+              </li>
+              <li class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>序位法則：長幼有序，尊重先來後到的位置</span>
+              </li>
+              <li class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>平衡法則：施與受之間需要流動與平衡</span>
+              </li>
+            </ul>
+            <p class="pt-4 border-l-4 border-indigo-500 pl-4 italic">
+              「愛是秩序的一部分。秩序是預先存在的，愛只能在秩序中成長。」—— 海寧格
+            </p>
+          </div>
+        </div>
+        <div class="md:w-1/2 bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl">
+          <h3 class="text-xl font-bold mb-4 text-indigo-300">為什麼這對現代人至關重要？</h3>
+          <p class="text-slate-400 mb-6">
+            在 AI 與高科技時代，人類與根源的連結反而更加斷裂。系統排列幫助我們重新連結「根」的力量，這是任何演算法都無法模擬的生命底層代碼。
+          </p>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-slate-700 p-4 rounded-lg">
+              <h4 class="font-bold mb-1">潛意識具象化</h4>
+              <p class="text-sm text-slate-400">將內在圖像外顯，快速鎖定核心問題。</p>
+            </div>
+            <div class="bg-slate-700 p-4 rounded-lg">
+              <h4 class="font-bold mb-1">打破重複模式</h4>
+              <p class="text-sm text-slate-400">停止複製父母或祖輩的命運。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Instructor Section -->
+  <section id="instructor" class="py-24 bg-indigo-50">
+    <div class="container mx-auto px-6">
+      <h2 class="text-sm font-bold tracking-widest text-indigo-600 uppercase mb-2 text-center">INSTRUCTORS</h2>
+      <h3 class="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-12 text-center">導師介紹</h3>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16">
+        <!-- 導師 1 -->
+        <div class="flex flex-col items-center">
+          <div class="relative mb-6 w-full max-w-sm">
+            <div class="absolute inset-0 bg-indigo-200 transform translate-x-4 translate-y-4 rounded-lg"></div>
+            <img 
+              src="/lobo_lau.jpeg" 
+              alt="Dr. LOBO LAU 國際導師照片" 
+              class="relative rounded-lg shadow-xl w-full object-cover aspect-[3/4] hover:scale-[1.01] transition duration-500"
+            />
+          </div>
+          <div class="text-center">
+            <h4 class="text-2xl md:text-3xl font-serif font-bold text-slate-900 mb-4">Dr. LOBO LAU 老師</h4>
+            <p class="text-lg text-slate-700 italic mb-6">
+              「我不創造療癒，我只是為療癒創造空間。當真相被看見，愛自然流動。」
+            </p>
+            <div class="space-y-4 text-slate-600 mb-8 text-left">
+              <p>
+                擁有超過 20 年的系統排列臨床經驗，師承德國海寧格學院。是亞洲少數能以雙語（中/英）進行教學，並結合東方哲學與西方心理學的國際級導師。
+              </p>
+              <p>
+                曾受邀至歐洲、美國及東南亞多國舉辦工作坊，協助超過數千個家庭修復關係，找回生命動力。
+              </p>
+            </div>
+            
+            <div class="flex flex-wrap gap-3 justify-center">
+              <span class="bg-white px-4 py-2 rounded-full text-sm font-medium text-slate-600 shadow-sm border border-slate-200">德國海寧格科學中心認證</span>
+              <span class="bg-white px-4 py-2 rounded-full text-sm font-medium text-slate-600 shadow-sm border border-slate-200">國際系統排列協會資深會員</span>
+              <span class="bg-white px-4 py-2 rounded-full text-sm font-medium text-slate-600 shadow-sm border border-slate-200">心理學博士</span>
+              <span class="bg-white px-4 py-2 rounded-full text-sm font-medium text-slate-600 shadow-sm border border-slate-200">暢銷書作家</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 導師 2 -->
+        <div class="flex flex-col items-center">
+          <div class="relative mb-6 w-full max-w-sm">
+            <div class="absolute inset-0 bg-indigo-200 transform translate-x-4 translate-y-4 rounded-lg"></div>
+            <img 
+              src="/david_leung.jpeg" 
+              alt="David Lau 導師照片" 
+              class="relative rounded-lg shadow-xl w-full object-cover aspect-[3/4] hover:scale-[1.01] transition duration-500"
+            />
+          </div>
+          <div class="text-center">
+            <h4 class="text-2xl md:text-3xl font-serif font-bold text-slate-900 mb-2">David Lau 老師</h4>
+            <p class="text-sm text-slate-600 mb-4">NGH 催眠治療師 / 頌缽治療師 / Amar 主理人</p>
+            <p class="text-lg text-slate-700 italic mb-6">
+              「解開潛意識的結，找回關係中的愛。」
+            </p>
+            <div class="space-y-4 text-slate-600 mb-8 text-left">
+              <p>
+                自 2022 年起投身療癒領域，David 導師深知現代人在關係中的無力感。他先後取得頌缽音療與美國 NGH 催眠治療專業資格，致力於將東方的共振療癒與西方的潛意識科學相結合。
+              </p>
+              <p>
+                在 David 的諮詢室裡，沒有批判，只有深度的聆聽與看見。他擅長協助案主抽絲剝繭，從紛亂的情緒中理出頭緒，找出那個「卡住」的背後動力。透過催眠引導，他陪伴無數案主與過去的自己和解，將沈重的糾結釋放。
+              </p>
+              <p class="text-slate-700 font-medium">
+                <span class="text-indigo-600">品牌故事：Amar</span><br />
+                Amar 是西班牙文中「深情的愛」。David 以此命名，是因為看見太多人受困於與家人、伴侶的關係糾葛中。他希望透過 Amar，讓更多人明白：只要解開結，愛，一直都在。
+              </p>
+            </div>
+            
+            <div class="flex flex-wrap gap-3 justify-center">
+              <span class="bg-white px-4 py-2 rounded-full text-sm font-medium text-slate-600 shadow-sm border border-slate-200">NGH 催眠治療師</span>
+              <span class="bg-white px-4 py-2 rounded-full text-sm font-medium text-slate-600 shadow-sm border border-slate-200">頌缽音療</span>
+              <span class="bg-white px-4 py-2 rounded-full text-sm font-medium text-slate-600 shadow-sm border border-slate-200">Amar 主理人</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section id="testimonials" class="py-24 bg-white">
+    <div class="container mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-sm font-bold tracking-widest text-indigo-600 uppercase mb-2">TESTIMONIALS</h2>
+        <h3 class="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-4">學員見證</h3>
+        <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+          真實的改變，來自真實的體驗。聽聽學員們如何透過系統排列找回生命的力量。
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- 見證 1 -->
+        <div class="bg-slate-50 rounded-xl p-8 shadow-lg hover:shadow-xl transition duration-300 border border-slate-100">
+          <div class="flex items-center gap-1 mb-4">
+            {[...Array(5)].map(() => (
+              <svg class="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+              </svg>
+            ))}
+          </div>
+          <p class="text-slate-700 mb-6 leading-relaxed italic">
+            「參加工作坊後，我終於理解為什麼總是重複同樣的關係模式。透過排列，我看見了家族中被隱藏的動力，也找到了和解的方式。現在的我，感覺前所未有的輕鬆。」
+          </p>
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white font-bold">
+              王
+            </div>
+            <div>
+              <p class="font-semibold text-slate-900">王小姐</p>
+              <p class="text-sm text-slate-500">2024年 12月工作坊學員</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 見證 2 -->
+        <div class="bg-slate-50 rounded-xl p-8 shadow-lg hover:shadow-xl transition duration-300 border border-slate-100">
+          <div class="flex items-center gap-1 mb-4">
+            {[...Array(5)].map(() => (
+              <svg class="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+              </svg>
+            ))}
+          </div>
+          <p class="text-slate-700 mb-6 leading-relaxed italic">
+            「原本以為只是心理課程，沒想到觸及了這麼深的層面。與父母的關係在排列後有了根本性的轉變，那種釋放的感覺，真的很難用言語形容。」
+          </p>
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white font-bold">
+              陳
+            </div>
+            <div>
+              <p class="font-semibold text-slate-900">陳先生</p>
+              <p class="text-sm text-slate-500">2024年 11月工作坊學員</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 見證 3 -->
+        <div class="bg-slate-50 rounded-xl p-8 shadow-lg hover:shadow-xl transition duration-300 border border-slate-100">
+          <div class="flex items-center gap-1 mb-4">
+            {[...Array(5)].map(() => (
+              <svg class="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+              </svg>
+            ))}
+          </div>
+          <p class="text-slate-700 mb-6 leading-relaxed italic">
+            「工作坊結束後，我發現自己對金錢的態度完全改變了。以前總是留不住錢，現在才明白那是家族中某種能量的阻斷。排列後，金錢流動變得順暢，真的很神奇。」
+          </p>
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white font-bold">
+              李
+            </div>
+            <div>
+              <p class="font-semibold text-slate-900">李小姐</p>
+              <p class="text-sm text-slate-500">2024年 10月工作坊學員</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Blog Section -->
+  <section id="blog" class="py-24 bg-indigo-50">
+    <div class="container mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-sm font-bold tracking-widest text-indigo-600 uppercase mb-2">BLOG</h2>
+        <h3 class="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-4">最新文章</h3>
+        <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+          深入探索家族系統排列的智慧，了解療癒與成長的深度文章。
+        </p>
+      </div>
+
+      {latestPosts.length === 0 ? (
+        <div class="text-center py-12">
+          <p class="text-slate-500 text-lg mb-4">目前尚無文章</p>
+          <a 
+            href="/keystatic" 
+            class="inline-block bg-indigo-900 text-white px-6 py-3 rounded-full hover:bg-indigo-800 transition"
+          >
+            前往 Keystatic 後台新增文章
+          </a>
+        </div>
+      ) : (
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {latestPosts.map((post) => (
+            <article class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition duration-300">
+              {post.entry.coverImage && (
+                <a href={`/blog/${post.slug}`}>
+                  <img 
+                    src={post.entry.coverImage} 
+                    alt={post.entry.title}
+                    class="w-full h-48 object-cover hover:scale-105 transition duration-300"
+                  />
+                </a>
+              )}
+              <div class="p-6">
+                <div class="flex items-center gap-4 text-sm text-slate-500 mb-3">
+                  <time>
+                    {new Date(post.entry.publishedDate).toLocaleDateString('zh-TW', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </time>
+                  <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    {post.entry.views || 0} 次閱讀
+                  </span>
+                </div>
+                
+                <h2 class="text-xl font-bold text-slate-900 mt-2 mb-3">
+                  <a 
+                    href={`/blog/${post.slug}`}
+                    class="hover:text-indigo-600 transition"
+                  >
+                    {post.entry.title}
+                  </a>
+                </h2>
+                
+                {/* 分類和標籤 */}
+                <div class="flex flex-wrap items-center gap-2 mb-3">
+                  {post.categoryData && (
+                    <span 
+                      class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                      style={post.categoryData.entry.color ? `background-color: ${post.categoryData.entry.color}20; color: ${post.categoryData.entry.color};` : ''}
+                    >
+                      {post.categoryData.entry.displayName}
+                    </span>
+                  )}
+                  {post.tagsData && post.tagsData.length > 0 && (
+                    post.tagsData.slice(0, 2).map((tag: any) => (
+                      <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                        #{tag.entry.displayName}
+                      </span>
+                    ))
+                  )}
+                </div>
+                
+                {post.entry.excerpt && (
+                  <p class="text-slate-600 mb-4 line-clamp-3">
+                    {post.entry.excerpt}
+                  </p>
+                )}
+                <a 
+                  href={`/blog/${post.slug}`}
+                  class="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-800 transition"
+                >
+                  閱讀更多
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                  </svg>
+                </a>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {latestPosts.length > 0 && (
+        <div class="text-center mt-12">
+          <a 
+            href="/blog"
+            class="inline-flex items-center gap-2 bg-indigo-900 text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-indigo-800 transition shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+          >
+            查看所有文章
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+            </svg>
+          </a>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Photo Gallery Section -->
+  <section id="gallery" class="py-24 bg-white">
+    <div class="container mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-sm font-bold tracking-widest text-indigo-600 uppercase mb-2">GALLERY</h2>
+        <h3 class="text-3xl md:text-4xl font-serif font-bold text-slate-900 mb-4">相片庫</h3>
+        <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+          記錄工作坊的珍貴時刻，見證每一次療癒與轉化的瞬間。
+        </p>
+      </div>
+
+      <!-- Gallery Grid - 4x2 Layout (8 photos) -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto" id="galleryGrid">
+        <!-- 相片項目 - 可以替換為實際圖片 -->
+        <div class="gallery-item group relative overflow-hidden rounded-lg cursor-pointer" onclick="openLightbox(0)">
+          <img 
+            src="/lobo_lau.jpeg" 
+            alt="工作坊相片 1" 
+            class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110"
+          />
+          <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+            <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+            </svg>
+          </div>
+        </div>
+
+        <div class="gallery-item group relative overflow-hidden rounded-lg cursor-pointer" onclick="openLightbox(1)">
+          <img 
+            src="/david_leung.jpeg" 
+            alt="工作坊相片 2" 
+            class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110"
+          />
+          <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+            <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+            </svg>
+          </div>
+        </div>
+
+        <!-- 更多相片項目 - 使用佔位圖片（共 6 個，總共 8 張相片） -->
+        {[...Array(6)].map((_, i) => (
+          <div class={`gallery-item group relative overflow-hidden rounded-lg cursor-pointer`} onclick={`openLightbox(${i + 2})`}>
+            <div class="w-full h-64 bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 flex items-center justify-center">
+              <div class="text-center">
+                <svg class="w-16 h-16 mx-auto text-indigo-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <p class="text-sm text-slate-500">相片 {i + 3}</p>
+              </div>
+            </div>
+            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+              <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+              </svg>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <!-- 了解更多按鈕 -->
+      <div class="text-center mt-12">
+        <button 
+          onclick="scrollToSection('offer')"
+          class="inline-flex items-center gap-2 bg-indigo-900 text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-indigo-800 transition shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+        >
+          了解更多
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center p-4">
+      <button 
+        onclick="closeLightbox()" 
+        class="absolute top-4 right-4 text-white hover:text-indigo-400 transition z-10"
+      >
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+      <button 
+        onclick="changeImage(-1)" 
+        class="absolute left-4 text-white hover:text-indigo-400 transition z-10"
+      >
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+      </button>
+      <button 
+        onclick="changeImage(1)" 
+        class="absolute right-4 text-white hover:text-indigo-400 transition z-10"
+      >
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+      </button>
+      <img 
+        id="lightboxImage" 
+        src="" 
+        alt="相片" 
+        class="max-w-full max-h-[90vh] object-contain rounded-lg"
+      />
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="py-24 bg-white">
+    <div class="container mx-auto px-6 max-w-4xl">
+      <h2 class="text-3xl md:text-4xl font-serif font-bold text-center text-slate-900 mb-12">常見疑問與洞見</h2>
+      <div class="space-y-4">
+        <details class="group bg-slate-50 rounded-xl p-6 open:bg-indigo-50 transition cursor-pointer">
+          <summary class="flex justify-between items-center font-bold text-lg text-slate-800 list-none">
+            <span class="flex items-center gap-3">
+              <span class="text-indigo-500">Q.</span> 我需要帶著家人一起來參加嗎？
+            </span>
+            <span class="transform group-open:rotate-180 transition text-indigo-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </span>
+          </summary>
+          <div class="mt-4 text-slate-600 pl-8 leading-relaxed">
+            不需要。系統排列是在「你的」內在運作。只要家族中的一個人發生改變，整個系統的動力就會隨之改變。你就是那個關鍵的改變者。
+          </div>
+        </details>
+        <details class="group bg-slate-50 rounded-xl p-6 open:bg-indigo-50 transition cursor-pointer">
+          <summary class="flex justify-between items-center font-bold text-lg text-slate-800 list-none">
+            <span class="flex items-center gap-3">
+              <span class="text-indigo-500">Q.</span> 排列看起來很像通靈，它是科學的嗎？
+            </span>
+            <span class="transform group-open:rotate-180 transition text-indigo-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </span>
+          </summary>
+          <div class="mt-4 text-slate-600 pl-8 leading-relaxed">
+            家族排列屬於「現象學」範疇，並非迷信。近年來表觀遺傳學 (Epigenetics) 與量子力學的研究，也逐漸佐證了創傷記憶可能會透過基因表達或場域訊息進行跨代傳遞。
+          </div>
+        </details>
+        <details class="group bg-slate-50 rounded-xl p-6 open:bg-indigo-50 transition cursor-pointer">
+          <summary class="flex justify-between items-center font-bold text-lg text-slate-800 list-none">
+            <span class="flex items-center gap-3">
+              <span class="text-indigo-500">Q.</span> 課程後會有什麼改變？
+            </span>
+            <span class="transform group-open:rotate-180 transition text-indigo-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </span>
+          </summary>
+          <div class="mt-4 text-slate-600 pl-8 leading-relaxed">
+            每個人不同。許多學員回饋：與父母關係和解、莫名身體病痛消失、找到伴侶、或是金錢流動變得順暢。最重要的是，你會感到一種前所未有的「輕鬆感」。
+          </div>
+        </details>
+        <details class="group bg-slate-50 rounded-xl p-6 open:bg-indigo-50 transition cursor-pointer">
+          <summary class="flex justify-between items-center font-bold text-lg text-slate-800 list-none">
+            <span class="flex items-center gap-3">
+              <span class="text-indigo-500">Q.</span> 什麼樣的人適合參加這個課程？
+            </span>
+            <span class="transform group-open:rotate-180 transition text-indigo-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </span>
+          </summary>
+          <div class="mt-4 text-slate-600 pl-8 leading-relaxed">
+            1. 感覺生命停滯不前的人。 2. 想要改善親子或伴侶關係的人。 3. 助人工作者（心理師、社工、療癒師）。 4. 對家族潛意識動力好奇的探索者。
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA / Offer Section with Early Bird Form -->
+  <section id="offer" class="py-24 bg-gradient-to-br from-indigo-900 to-slate-900 text-white text-center">
+    <div class="container mx-auto px-6 max-w-4xl">
+      <h2 class="text-4xl md:text-5xl font-serif font-bold mb-6">準備好回家了嗎？</h2>
+      <p class="text-xl text-indigo-200 mb-12">
+        回到你生命的位置，承接家族的力量，活出你自己。
+      </p>
+
+      <div class="bg-white/10 backdrop-blur-lg rounded-3xl p-8 md:p-12 border border-white/20 shadow-2xl relative overflow-hidden">
+        <!-- Scarcity Badge -->
+        <div class="absolute top-0 right-0 bg-rose-500 text-white text-xs font-bold px-4 py-2 rounded-bl-xl uppercase tracking-wider">
+          Limited Seats Available
+        </div>
+
+        <h3 class="text-2xl font-bold mb-4">【歸位・重生】國際家族系統排列深度工作坊</h3>
+        <div class="text-indigo-200 mb-8 space-y-2">
+          <p>📅 日期：2024年 12月 15-16日 (週末)</p>
+          <p>📍 地點：台北市 (詳細地址報名後通知)</p>
+          <p>💎 形式：現場個案排列 + 理論教學 + 團體療癒</p>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-6 justify-center items-center mb-8">
+          <div class="text-left">
+            <p class="text-sm text-slate-400 line-through">原價 NT$ 28,000</p>
+            <p class="text-4xl font-bold text-white">NT$ 16,800 <span class="text-sm font-normal text-indigo-300">/ 早鳥優惠</span></p>
+          </div>
+        </div>
+
+        <!-- Early Bird Registration Form -->
+        <div class="bg-white/5 rounded-2xl p-6 md:p-8 border border-white/10">
+          <h4 class="text-xl font-bold mb-6 text-center">早鳥報名表單</h4>
+          <form id="earlyBirdForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label for="name" class="block text-sm font-medium text-indigo-200 mb-2">姓名 *</label>
+                <input 
+                  type="text" 
+                  id="name" 
+                  name="name" 
+                  required 
+                  class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                  placeholder="請輸入您的姓名"
+                />
+              </div>
+              <div>
+                <label for="phone" class="block text-sm font-medium text-indigo-200 mb-2">聯絡電話 *</label>
+                <input 
+                  type="tel" 
+                  id="phone" 
+                  name="phone" 
+                  required 
+                  class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                  placeholder="請輸入您的電話"
+                />
+              </div>
+            </div>
+            <div>
+              <label for="email" class="block text-sm font-medium text-indigo-200 mb-2">電子郵件 *</label>
+              <input 
+                type="email" 
+                id="email" 
+                name="email" 
+                required 
+                class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                placeholder="請輸入您的電子郵件"
+              />
+            </div>
+            <div>
+              <label for="message" class="block text-sm font-medium text-indigo-200 mb-2">想了解的問題或備註</label>
+              <textarea 
+                id="message" 
+                name="message" 
+                rows="4"
+                class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-none"
+                placeholder="請告訴我們您想了解的問題或任何備註..."
+              ></textarea>
+            </div>
+            <div class="flex items-center">
+              <input 
+                type="checkbox" 
+                id="agree" 
+                name="agree" 
+                required 
+                class="w-4 h-4 text-indigo-600 bg-white/10 border-white/20 rounded focus:ring-indigo-500"
+              />
+              <label for="agree" class="ml-2 text-sm text-indigo-200">
+                我同意接收課程相關資訊及後續通知 *
+              </label>
+            </div>
+            <button 
+              type="submit" 
+              class="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 px-10 py-4 rounded-full text-xl font-bold hover:shadow-[0_0_20px_rgba(251,191,36,0.5)] transition transform hover:scale-105"
+            >
+              立即搶佔席位
+            </button>
+          </form>
+          <div id="formMessage" class="mt-4 text-center hidden"></div>
+        </div>
+        
+        <p class="mt-6 text-sm text-slate-400">
+          * 為確保場域品質，本場次僅限 30 位學員。目前僅剩 5 席。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-slate-950 text-slate-400 py-12 border-t border-slate-800">
+    <div class="container mx-auto px-6 grid md:grid-cols-4 gap-8">
+      <div>
+        <div class="text-xl font-serif font-bold text-white mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 002 2h2.945M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          AMAR
+        </div>
+        <p class="text-sm">致力於推廣正統系統排列，協助個案找回生命秩序與愛的流動。</p>
+      </div>
+      <div>
+        <h4 class="text-white font-bold mb-4">連結</h4>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#" class="hover:text-indigo-400">關於我們</a></li>
+          <li><a href="#" class="hover:text-indigo-400">課程資訊</a></li>
+          <li><a href="/blog" class="hover:text-indigo-400">部落格 (SEO Articles)</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="text-white font-bold mb-4">法律</h4>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#" class="hover:text-indigo-400">隱私權政策</a></li>
+          <li><a href="#" class="hover:text-indigo-400">服務條款</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="text-white font-bold mb-4">訂閱電子報</h4>
+        <div class="flex">
+          <input type="email" placeholder="Email" class="bg-slate-900 border border-slate-700 rounded-l-lg px-4 py-2 w-full focus:outline-none focus:border-indigo-500" />
+          <button class="bg-indigo-600 text-white px-4 rounded-r-lg hover:bg-indigo-500">OK</button>
+        </div>
+      </div>
+    </div>
+    <div class="container mx-auto px-6 mt-12 pt-8 border-t border-slate-800 text-center text-xs">
+      © 2024 AMAR. All rights reserved.
+    </div>
+  </footer>
+  
+  <script is:inline>
+    // 滾動效果改變導航欄樣式
+    let scrolled = false;
+    const navbar = document.getElementById('navbar');
+    
+      window.addEventListener('scroll', () => {
+        const isScrolled = window.scrollY > 50;
+        if (isScrolled !== scrolled) {
+          scrolled = isScrolled;
+          if (scrolled) {
+            navbar.classList.remove('bg-transparent', 'py-5');
+            navbar.classList.add('bg-white/90', 'backdrop-blur-md', 'shadow-md', 'py-3');
+          } else {
+            navbar.classList.remove('bg-white/90', 'backdrop-blur-md', 'shadow-md', 'py-3');
+            navbar.classList.add('bg-transparent', 'py-5');
+          }
+        }
+      });
+
+    // 平滑滾動到區塊
+    function scrollToSection(id) {
+      const element = document.getElementById(id);
+      if (element) {
+        // 計算導航欄高度，調整滾動位置
+        const navbarHeight = navbar.offsetHeight;
+        const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+        const offsetPosition = elementPosition - navbarHeight - 20;
+        
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+      toggleMenu(false);
+    }
+
+    // 手機版選單切換
+    function toggleMenu(forceClose = null) {
+      const mobileMenu = document.getElementById('mobileMenu');
+      const menuIcon = document.getElementById('menuIcon');
+      const closeIcon = document.getElementById('closeIcon');
+      
+      if (forceClose === false || (forceClose === null && !mobileMenu.classList.contains('hidden'))) {
+        mobileMenu.classList.add('hidden');
+        menuIcon.classList.remove('hidden');
+        closeIcon.classList.add('hidden');
+      } else {
+        mobileMenu.classList.remove('hidden');
+        mobileMenu.classList.add('flex');
+        menuIcon.classList.add('hidden');
+        closeIcon.classList.remove('hidden');
+      }
+    }
+
+    // 表單提交處理
+    async function handleFormSubmit(event) {
+      event.preventDefault();
+      
+      const form = event.target;
+      const formMessage = document.getElementById('formMessage');
+      const submitButton = form.querySelector('button[type="submit"]');
+      
+      // 取得表單資料
+      const formData = new FormData(form);
+      const data = {
+        name: formData.get('name'),
+        phone: formData.get('phone'),
+        email: formData.get('email'),
+        message: formData.get('message') || ''
+      };
+      
+      // 顯示載入狀態
+      submitButton.disabled = true;
+      submitButton.textContent = '提交中...';
+      formMessage.classList.add('hidden');
+      formMessage.classList.remove('text-green-400', 'text-red-400');
+      
+      try {
+        // 取得 API 端點 URL
+        const apiUrl = '/api/register';
+        
+        // 發送請求到後端 API
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          // 成功：顯示成功訊息
+          formMessage.classList.remove('hidden');
+          formMessage.classList.add('text-green-400');
+          formMessage.textContent = '✅ ' + (result.message || '報名表單已提交！我們會盡快與您聯繫。');
+          
+          // 重置表單
+          form.reset();
+          
+          // 5秒後隱藏訊息
+          setTimeout(() => {
+            formMessage.classList.add('hidden');
+          }, 5000);
+        } else {
+          // 失敗：顯示錯誤訊息
+          formMessage.classList.remove('hidden');
+          formMessage.classList.add('text-red-400');
+          formMessage.textContent = '❌ ' + (result.error || '提交失敗，請稍後再試。');
+        }
+      } catch (error) {
+        // 網路錯誤或其他錯誤
+        console.error('表單提交錯誤:', error);
+        formMessage.classList.remove('hidden');
+        formMessage.classList.add('text-red-400');
+        formMessage.textContent = '❌ 網路錯誤，請檢查您的網路連線後再試。';
+      } finally {
+        // 恢復按鈕狀態
+        submitButton.disabled = false;
+        submitButton.textContent = '立即搶佔席位';
+      }
+    }
+
+    // 相片庫燈箱功能
+    let currentImageIndex = 0;
+    const galleryImages = [
+      '/lobo_lau.jpeg',
+      '/david_leung.jpeg',
+      // 可以添加更多圖片路徑
+    ];
+
+    function openLightbox(index) {
+      currentImageIndex = index;
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImage = document.getElementById('lightboxImage');
+      
+      // 獲取所有相片項目的圖片
+      const galleryItems = document.querySelectorAll('.gallery-item img');
+      if (galleryItems[index]) {
+        lightboxImage.src = galleryItems[index].src;
+        lightboxImage.alt = galleryItems[index].alt || '相片';
+      } else {
+        // 如果是佔位圖片，使用預設圖片
+        lightboxImage.src = galleryImages[index] || galleryImages[0];
+      }
+      
+      lightbox.classList.remove('hidden');
+      lightbox.classList.add('flex');
+      document.body.style.overflow = 'hidden'; // 防止背景滾動
+    }
+
+    function closeLightbox() {
+      const lightbox = document.getElementById('lightbox');
+      lightbox.classList.add('hidden');
+      lightbox.classList.remove('flex');
+      document.body.style.overflow = ''; // 恢復滾動
+    }
+
+    function changeImage(direction) {
+      const galleryItems = document.querySelectorAll('.gallery-item');
+      const totalImages = galleryItems.length;
+      
+      currentImageIndex += direction;
+      
+      if (currentImageIndex < 0) {
+        currentImageIndex = totalImages - 1;
+      } else if (currentImageIndex >= totalImages) {
+        currentImageIndex = 0;
+      }
+      
+      const lightboxImage = document.getElementById('lightboxImage');
+      const clickedImage = galleryItems[currentImageIndex].querySelector('img');
+      
+      if (clickedImage) {
+        lightboxImage.src = clickedImage.src;
+        lightboxImage.alt = clickedImage.alt || '相片';
+      }
+    }
+
+    // 按 ESC 鍵關閉燈箱
+    document.addEventListener('keydown', (e) => {
+      const lightbox = document.getElementById('lightbox');
+      if (e.key === 'Escape' && !lightbox.classList.contains('hidden')) {
+        closeLightbox();
+      }
+      // 左右箭頭鍵切換圖片
+      if (e.key === 'ArrowLeft' && !lightbox.classList.contains('hidden')) {
+        changeImage(-1);
+      }
+      if (e.key === 'ArrowRight' && !lightbox.classList.contains('hidden')) {
+        changeImage(1);
+      }
+    });
+
+    // 點擊燈箱背景關閉
+    document.getElementById('lightbox')?.addEventListener('click', (e) => {
+      if (e.target.id === 'lightbox') {
+        closeLightbox();
+      }
+    });
+  </script>
+</Layout>
