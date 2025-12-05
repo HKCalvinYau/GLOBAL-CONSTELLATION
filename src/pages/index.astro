@@ -1,15 +1,15 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
-// 在 Cloudflare Pages 環境中，只有在有 GitHub 環境變數時才初始化 reader
-// 這樣可以避免在構建時打包 Node.js 內建模組
+// 在 Cloudflare Pages 構建時，完全避免導入 reader
+// 使用字符串動態導入，避免 Vite 在構建時解析
 let reader = null;
 if (import.meta.env.KEYSTATIC_GITHUB_OWNER && import.meta.env.KEYSTATIC_GITHUB_REPO) {
   try {
-    // 只在有 GitHub 配置時才動態導入
-    const { createReader } = await import('@keystatic/core/reader');
-    const keystaticConfig = (await import('../../keystatic.config')).default;
-    reader = createReader('.', keystaticConfig);
+    // 使用字符串動態導入，避免 Vite 靜態分析
+    const readerModule = await import(/* @vite-ignore */ '@keystatic/core/reader');
+    const configModule = await import(/* @vite-ignore */ '../../keystatic.config');
+    reader = readerModule.createReader('.', configModule.default);
   } catch (e) {
     console.warn('無法初始化 Keystatic reader:', e);
   }

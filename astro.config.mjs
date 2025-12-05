@@ -20,12 +20,27 @@ export default defineConfig({
   adapter: cloudflare(), // Cloudflare Pages 適配器
   vite: {
     ssr: {
-      // 排除 @keystatic/core 的 reader 部分，因為它使用 Node.js 內建模組
-      external: ['@keystatic/core/reader'],
+      // 完全排除 @keystatic/core 的 reader，因為它使用 Node.js 內建模組
+      // 我們使用動態導入和 @vite-ignore 來避免構建時解析
+      external: [
+        '@keystatic/core/reader',
+        '@keystatic/core/dist/keystatic-core-reader.worker.js'
+      ],
       noExternal: ['@keystatic/astro']
     },
     optimizeDeps: {
-      exclude: ['@keystatic/core/reader']
+      exclude: [
+        '@keystatic/core/reader',
+        '@keystatic/core/dist/keystatic-core-reader.worker.js'
+      ]
+    },
+    resolve: {
+      // 避免解析 Node.js 內建模組
+      alias: {
+        'node:path': false,
+        'node:fs': false,
+        'node:url': false
+      }
     }
   }
 });
