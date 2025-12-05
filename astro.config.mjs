@@ -20,13 +20,12 @@ export default defineConfig({
   adapter: cloudflare(), // Cloudflare Pages 適配器
   vite: {
     ssr: {
-      noExternal: ['@keystatic/core'],
-      resolve: {
-        conditions: ['worker', 'browser']
-      }
+      // 排除 @keystatic/core 的 reader 部分，因為它使用 Node.js 內建模組
+      external: ['@keystatic/core/reader'],
+      noExternal: ['@keystatic/astro']
     },
     optimizeDeps: {
-      exclude: ['@keystatic/core']
+      exclude: ['@keystatic/core/reader']
     }
   }
 });

@@ -1,16 +1,16 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 
-// 在 Cloudflare Pages 環境中，使用條件導入
-let reader;
-try {
-  const { createReader } = await import('@keystatic/core/reader');
-  const keystaticConfig = (await import('../../../keystatic.config')).default;
-  const repoPath = import.meta.env.KEYSTATIC_GITHUB_OWNER ? '.' : (import.meta.env.PWD || '.');
-  reader = createReader(repoPath, keystaticConfig);
-} catch (e) {
-  console.warn('無法初始化 Keystatic reader:', e);
-  reader = null;
+// 在 Cloudflare Pages 環境中，只有在有 GitHub 環境變數時才初始化 reader
+let reader = null;
+if (import.meta.env.KEYSTATIC_GITHUB_OWNER && import.meta.env.KEYSTATIC_GITHUB_REPO) {
+  try {
+    const { createReader } = await import('@keystatic/core/reader');
+    const keystaticConfig = (await import('../../../keystatic.config')).default;
+    reader = createReader('.', keystaticConfig);
+  } catch (e) {
+    console.warn('無法初始化 Keystatic reader:', e);
+  }
 }
 
 // 取得所有文章
