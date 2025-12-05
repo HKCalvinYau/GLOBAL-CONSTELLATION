@@ -72,15 +72,32 @@ if (!owner || !repo) {
 }
 
 try {
-  // 動態導入 Keystatic，避免構建時問題
+  console.log('開始初始化 Keystatic...');
   const KeystaticPage = makePage(keystaticConfig);
+  console.log('Keystatic 頁面創建成功，開始處理請求...');
+  
   const result = await KeystaticPage(Astro);
+  console.log('Keystatic 處理完成，結果類型:', typeof result);
+  console.log('Keystatic 結果:', result ? '有結果' : '無結果');
   
   if (!result) {
     throw new Error('Keystatic 返回了空結果');
   }
   
-  return result;
+  // 確保返回的是有效的 Response 對象
+  if (result instanceof Response) {
+    console.log('返回 Response 對象，狀態碼:', result.status);
+    return result;
+  }
+  
+  // 如果不是 Response 對象，包裝它
+  console.log('結果不是 Response 對象，進行包裝');
+  return new Response(result, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8'
+    }
+  });
 } catch (error) {
   console.error('Keystatic 錯誤:', error);
   console.error('錯誤堆棧:', error instanceof Error ? error.stack : '無堆棧信息');
