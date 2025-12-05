@@ -3,11 +3,15 @@ import { config, fields, collection } from '@keystatic/core';
 // 根據環境變數選擇存儲方式
 // 如果設置了 GitHub 環境變數，使用 GitHub 存儲；否則使用本地存儲
 const getStorage = () => {
-  // 在 Astro 中，環境變數通過 import.meta.env 訪問
-  // 在 Cloudflare Pages 中，環境變數需要通過 import.meta.env 訪問
-  const owner = import.meta.env.KEYSTATIC_GITHUB_OWNER;
-  const repo = import.meta.env.KEYSTATIC_GITHUB_REPO;
-  const token = import.meta.env.KEYSTATIC_GITHUB_TOKEN;
+  // 在 Cloudflare Pages 中，環境變數可能需要在運行時動態獲取
+  // 嘗試多種方式訪問環境變數
+  let owner = import.meta.env.KEYSTATIC_GITHUB_OWNER;
+  let repo = import.meta.env.KEYSTATIC_GITHUB_REPO;
+  let token = import.meta.env.KEYSTATIC_GITHUB_TOKEN;
+  
+  // 如果通過 import.meta.env 無法獲取，嘗試其他方式
+  // 注意：在配置文件中，我們只能使用 import.meta.env
+  // 實際的運行時訪問應該在頁面組件中處理
   
   if (owner && repo) {
     const storage: any = {

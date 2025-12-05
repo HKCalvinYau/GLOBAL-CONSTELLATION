@@ -5,16 +5,47 @@ import keystaticConfig from '../../../keystatic.config';
 
 export const prerender = false;
 
-// 檢查環境變數
-const owner = import.meta.env.KEYSTATIC_GITHUB_OWNER;
-const repo = import.meta.env.KEYSTATIC_GITHUB_REPO;
-const token = import.meta.env.KEYSTATIC_GITHUB_TOKEN;
+// 在 Cloudflare Pages 中，環境變數通過 context.env 訪問
+// 但 Astro 使用 import.meta.env，需要通過 Astro.locals 或直接訪問
+// 嘗試多種方式訪問環境變數
+let owner, repo, token;
+
+// 方法 1: import.meta.env (標準方式)
+owner = import.meta.env.KEYSTATIC_GITHUB_OWNER;
+repo = import.meta.env.KEYSTATIC_GITHUB_REPO;
+token = import.meta.env.KEYSTATIC_GITHUB_TOKEN;
+
+// 方法 2: 通過 Astro.locals (Cloudflare 特定)
+if (!owner && Astro.locals.runtime) {
+  const runtime = Astro.locals.runtime as any;
+  if (runtime.env) {
+    owner = owner || runtime.env.KEYSTATIC_GITHUB_OWNER;
+    repo = repo || runtime.env.KEYSTATIC_GITHUB_REPO;
+    token = token || runtime.env.KEYSTATIC_GITHUB_TOKEN;
+  }
+}
+
+// 方法 3: 通過 context (如果可用)
+if (!owner && (Astro as any).context) {
+  const context = (Astro as any).context;
+  if (context.env) {
+    owner = owner || context.env.KEYSTATIC_GITHUB_OWNER;
+    repo = repo || context.env.KEYSTATIC_GITHUB_REPO;
+    token = token || context.env.KEYSTATIC_GITHUB_TOKEN;
+  }
+}
 
 // 記錄環境變數狀態（用於調試）
 console.log('Keystatic 環境變數檢查:', {
-  owner: owner ? '已設置' : '未設置',
-  repo: repo ? '已設置' : '未設置',
-  token: token ? '已設置' : '未設置'
+  owner: owner ? '已設置: ' + owner : '未設置',
+  repo: repo ? '已設置: ' + repo : '未設置',
+  token: token ? '已設置' : '未設置',
+  'import.meta.env': {
+    KEYSTATIC_GITHUB_OWNER: import.meta.env.KEYSTATIC_GITHUB_OWNER || 'undefined',
+    KEYSTATIC_GITHUB_REPO: import.meta.env.KEYSTATIC_GITHUB_REPO || 'undefined',
+    KEYSTATIC_GITHUB_TOKEN: import.meta.env.KEYSTATIC_GITHUB_TOKEN ? '已設置' : '未設置'
+  },
+  'Astro.locals.runtime': Astro.locals.runtime ? '存在' : '不存在'
 });
 
 // 如果缺少必要的環境變數，顯示錯誤訊息

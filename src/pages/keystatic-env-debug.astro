@@ -1,0 +1,167 @@
+---
+// 環境變數調試頁面 - 顯示所有可能的訪問方式
+export const prerender = false;
+
+// 收集所有可能的環境變數訪問方式
+const envData: any = {
+  'import.meta.env': {},
+  'Astro.locals': {},
+  'Astro.locals.runtime': {},
+  'context': {}
+};
+
+// 方法 1: import.meta.env
+try {
+  envData['import.meta.env'] = {
+    KEYSTATIC_GITHUB_OWNER: import.meta.env.KEYSTATIC_GITHUB_OWNER || 'undefined',
+    KEYSTATIC_GITHUB_REPO: import.meta.env.KEYSTATIC_GITHUB_REPO || 'undefined',
+    KEYSTATIC_GITHUB_TOKEN: import.meta.env.KEYSTATIC_GITHUB_TOKEN ? '已設置' : '未設置',
+    'PUBLIC_*': Object.keys(import.meta.env).filter(k => k.startsWith('PUBLIC_')),
+    '所有環境變數': Object.keys(import.meta.env)
+  };
+} catch (e) {
+  envData['import.meta.env'] = { error: String(e) };
+}
+
+// 方法 2: Astro.locals
+try {
+  envData['Astro.locals'] = {
+    keys: Object.keys(Astro.locals),
+    runtime: Astro.locals.runtime ? '存在' : '不存在'
+  };
+  
+  if (Astro.locals.runtime) {
+    const runtime = Astro.locals.runtime as any;
+    envData['Astro.locals.runtime'] = {
+      env: runtime.env ? Object.keys(runtime.env) : '不存在',
+      KEYSTATIC_GITHUB_OWNER: runtime.env?.KEYSTATIC_GITHUB_OWNER || 'undefined',
+      KEYSTATIC_GITHUB_REPO: runtime.env?.KEYSTATIC_GITHUB_REPO || 'undefined',
+      KEYSTATIC_GITHUB_TOKEN: runtime.env?.KEYSTATIC_GITHUB_TOKEN ? '已設置' : '未設置'
+    };
+  }
+} catch (e) {
+  envData['Astro.locals'] = { error: String(e) };
+}
+
+// 方法 3: context
+try {
+  const context = (Astro as any).context;
+  if (context) {
+    envData['context'] = {
+      exists: true,
+      env: context.env ? Object.keys(context.env) : '不存在',
+      KEYSTATIC_GITHUB_OWNER: context.env?.KEYSTATIC_GITHUB_OWNER || 'undefined',
+      KEYSTATIC_GITHUB_REPO: context.env?.KEYSTATIC_GITHUB_REPO || 'undefined',
+      KEYSTATIC_GITHUB_TOKEN: context.env?.KEYSTATIC_GITHUB_TOKEN ? '已設置' : '未設置'
+    };
+  } else {
+    envData['context'] = { exists: false };
+  }
+} catch (e) {
+  envData['context'] = { error: String(e) };
+}
+
+console.log('環境變數調試信息:', JSON.stringify(envData, null, 2));
+---
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>環境變數調試</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    h2 {
+      margin-top: 0;
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 10px;
+    }
+    .found {
+      color: #10b981;
+      font-weight: bold;
+    }
+    .not-found {
+      color: #ef4444;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔍 環境變數調試頁面</h1>
+    <p>這個頁面顯示所有可能的環境變數訪問方式，幫助診斷問題。</p>
+  </div>
+
+  <div class="card">
+    <h2>1. import.meta.env</h2>
+    <pre>{JSON.stringify(envData['import.meta.env'], null, 2)}</pre>
+    {envData['import.meta.env'].KEYSTATIC_GITHUB_OWNER !== 'undefined' ? (
+      <p class="found">✅ 在 import.meta.env 中找到環境變數</p>
+    ) : (
+      <p class="not-found">❌ 在 import.meta.env 中未找到環境變數</p>
+    )}
+  </div>
+
+  <div class="card">
+    <h2>2. Astro.locals</h2>
+    <pre>{JSON.stringify(envData['Astro.locals'], null, 2)}</pre>
+  </div>
+
+  {envData['Astro.locals'].runtime === '存在' && (
+    <div class="card">
+      <h2>3. Astro.locals.runtime.env</h2>
+      <pre>{JSON.stringify(envData['Astro.locals.runtime'], null, 2)}</pre>
+      {envData['Astro.locals.runtime'].KEYSTATIC_GITHUB_OWNER !== 'undefined' ? (
+        <p class="found">✅ 在 runtime.env 中找到環境變數</p>
+      ) : (
+        <p class="not-found">❌ 在 runtime.env 中未找到環境變數</p>
+      )}
+    </div>
+  )}
+
+  <div class="card">
+    <h2>4. context</h2>
+    <pre>{JSON.stringify(envData['context'], null, 2)}</pre>
+    {envData['context'].exists && envData['context'].KEYSTATIC_GITHUB_OWNER !== 'undefined' ? (
+      <p class="found">✅ 在 context.env 中找到環境變數</p>
+    ) : (
+      <p class="not-found">❌ 在 context.env 中未找到環境變數</p>
+    )}
+  </div>
+
+  <div class="card">
+    <h2>📝 診斷建議</h2>
+    <p>請查看上面的輸出，找到哪個方法可以訪問環境變數。</p>
+    <p>如果所有方法都顯示 "undefined" 或 "未設置"，可能是：</p>
+    <ol>
+      <li>環境變數未正確設置在 Cloudflare Pages</li>
+      <li>需要重新部署</li>
+      <li>環境變數名稱拼寫錯誤</li>
+      <li>Cloudflare Pages 的環境變數訪問方式有變化</li>
+    </ol>
+  </div>
+</body>
+</html>
+
