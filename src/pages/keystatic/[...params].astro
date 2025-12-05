@@ -58,43 +58,80 @@ if (!owner || !repo) {
 </body>
 </html>`,
     {
-      status: 500,
+      status: 200,
       headers: { 'Content-Type': 'text/html; charset=utf-8' }
     }
   );
 }
 
 try {
+  // 動態導入 Keystatic，避免構建時問題
   const KeystaticPage = makePage(keystaticConfig);
   const result = await KeystaticPage(Astro);
+  
+  if (!result) {
+    throw new Error('Keystatic 返回了空結果');
+  }
+  
   return result;
 } catch (error) {
   console.error('Keystatic 錯誤:', error);
-  return new Response(
-    `<!DOCTYPE html>
+  console.error('錯誤堆棧:', error instanceof Error ? error.stack : '無堆棧信息');
+  
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorStack = error instanceof Error ? error.stack : '無堆棧信息';
+  
+  const html = `<!DOCTYPE html>
 <html>
 <head>
   <title>Keystatic 錯誤</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
     .error { background: #fee; border: 1px solid #fcc; padding: 20px; border-radius: 8px; }
-    pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    .info { background: #eef; border: 1px solid #ccf; padding: 20px; border-radius: 8px; margin-top: 20px; }
+    pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+    code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; }
   </style>
 </head>
 <body>
   <div class="error">
     <h1>❌ Keystatic 運行錯誤</h1>
     <p>發生以下錯誤：</p>
-    <pre>${error instanceof Error ? error.message : String(error)}</pre>
-    <p>請檢查 Cloudflare Pages 的構建日誌以獲取更多信息。</p>
+    <pre>${errorMessage}</pre>
+    <details style="margin-top: 20px;">
+      <summary style="cursor: pointer; font-weight: bold;">查看詳細錯誤信息</summary>
+      <pre style="margin-top: 10px;">${errorStack}</pre>
+    </details>
+  </div>
+  <div class="info">
+    <h2>可能的解決方法：</h2>
+    <ol>
+      <li>確認環境變數已正確設置：
+        <ul>
+          <li><code>KEYSTATIC_GITHUB_OWNER</code> = <code>HKCalvinYau</code></li>
+          <li><code>KEYSTATIC_GITHUB_REPO</code> = <code>GLOBAL-CONSTELLATION</code></li>
+          <li><code>KEYSTATIC_GITHUB_TOKEN</code>（如果倉庫是私有的）</li>
+        </ul>
+      </li>
+      <li>確認環境變數應用於 <strong>All environments</strong></li>
+      <li>檢查 Cloudflare Pages 的運行時日誌</li>
+      <li>確認 GitHub Token 有正確的權限（<code>repo</code>）</li>
+      <li>重新部署專案</li>
+    </ol>
+    <p><strong>當前環境變數狀態：</strong></p>
+    <ul>
+      <li>KEYSTATIC_GITHUB_OWNER: ${owner || '❌ 未設置'}</li>
+      <li>KEYSTATIC_GITHUB_REPO: ${repo || '❌ 未設置'}</li>
+      <li>KEYSTATIC_GITHUB_TOKEN: ${token ? '✅ 已設置' : '⚠️ 未設置'}</li>
+    </ul>
   </div>
 </body>
-</html>`,
-    {
-      status: 500,
-      headers: { 'Content-Type': 'text/html; charset=utf-8' }
-    }
-  );
+</html>`;
+  
+  return new Response(html, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' }
+  });
 }
 ---
 
